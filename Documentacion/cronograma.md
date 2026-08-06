@@ -6,7 +6,7 @@ Plan de trabajo resumido y con estilo. Duración total: 45 días.
 
 ## Semana 1 (Días 1–3) — Arquitectura inicial
 
-- Configuración de repositorios y estructura de monorepo/microservicios.
+- Configuración de repositorios y estructura de monorepo.
 - Inicialización de contenedores Docker para aislar servicios.
 - Setup inicial del frontend con Vite + PWA.
 

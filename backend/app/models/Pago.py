@@ -1,15 +1,14 @@
-import re
-from typing import Optional
-from unittest.mock import Base 
-from sqlachemy import Column,String,Float, Integer, ForeignKey,Boolean,Decimal,DateTime  
-from sqlachemy.orm import relationship
+from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, DECIMAL
+from sqlalchemy.orm import relationship
+from app.db.base import Base 
 
 class Pago(Base):
     __tablename__ = "pagos"
+    
     id = Column(Integer, primary_key=True, index=True)
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     numero_recibo = Column(String, nullable=False)
-    monto = Column(Decimal, nullable=False)
+    monto = Column(DECIMAL, nullable=False)
     metodo_pago = Column(String, nullable=False)
     url_respaldo_pdf = Column(String, nullable=True)
     fecha_pago = Column(DateTime, nullable=False)

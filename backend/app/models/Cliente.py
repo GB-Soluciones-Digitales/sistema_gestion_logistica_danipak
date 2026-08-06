@@ -1,19 +1,19 @@
-import re
-from typing import Optional
-from unittest.mock import Base 
-from sqlachemy import Column,String,Float, Integer, ForeignKey,Boolean  
-from sqlachemy.orm import relationship
-
+from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy.orm import relationship
+from app.db.base import Base 
 
 class Cliente(Base):
     __tablename__ = "clientes"
+
     id = Column(Integer, primary_key=True, index=True)
-    razon_social = Column(String, nullable=False)
-    cuit_dni = Column(String, nullable=False, unique=True)
-    localidad_id = Column(Integer, ForeignKey("localidades.id"), nullable=False)
+    razon_social = Column(String, nullable=False, index=True)
+    cuit_dni = Column(String, unique=True, index=True, nullable=False)
     direccion = Column(String, nullable=True)
-    estado = Column(Boolean, default=True, nullable=False)
+    telefono = Column(String, nullable=True)
     email = Column(String, nullable=True)
+    estado = Column(Boolean, default=True, nullable=False)
 
-    localidad = relationship("Localidad", back_populates="clientes")
-
+    comprobantes = relationship("Comprobante", back_populates="cliente")
+    facturas = relationship("Factura", back_populates="cliente")
+    movimientos_cc = relationship("MovimientoCC", back_populates="cliente")
+    pagos = relationship("Pago", back_populates="cliente")

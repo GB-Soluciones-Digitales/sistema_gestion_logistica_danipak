@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: python:11-slim
+    container_name: sistema_gestion_danipak
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: python -m pip install -r requirements.txt && python app.py
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - logistica_network
+
+networks:
+  logistica_network:
+    driver: bridge

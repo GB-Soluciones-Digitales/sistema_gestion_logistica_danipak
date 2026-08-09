@@ -9,3 +9,12 @@ def get_usuario_by_email(db: Session, email: str) -> Usuario | None:
 
 def get_usuario_by_id(db: Session, user_id: int) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.id == user_id).first()
+
+def update_usuario_estado(db: Session, usuario_id: int, estado_actualizado: bool) -> Usuario | None:
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if (usuario!= None):
+        usuario.estado = estado_actualizado
+        db.commit()
+        db.refresh(usuario)
+
+    return usuario

@@ -11,8 +11,8 @@ def get_localidad_by_codigo_postal(db: Session, codigo_postal: str) -> Localidad
     return db.query(Localidad).filter(Localidad.codigo_postal == codigo_postal).first()
 
 def update_localidad_estado(db: Session, localidad_id: int, estado_actualizado: bool) -> Localidad | None:
-    localidad = db.query(Localidad).filter(Localidad.Base.id == localidad_id).first()
-    if (localidad != null):
+    localidad = db.query(Localidad).filter(Localidad.id == localidad_id).first()
+    if (localidad != None):
         localidad.estado = estado_actualizado
         db.commit()
         db.refresh(localidad)

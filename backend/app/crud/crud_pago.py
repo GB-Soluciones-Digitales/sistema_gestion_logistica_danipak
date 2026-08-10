@@ -7,8 +7,8 @@ def get_pago_by_id(db: Session, pago_id: int) -> Pago | None:
 def get_pago_by_numero_recibo(db: Session, numero_recibo: str) -> Pago | None:
     return db.query(Pago).filter(Pago.numero_recibo == numero_recibo).first()
 
-def get_pago_by_fecha_pago(db: Session, fecha_pago: str) -> Pago | None:
-    return db.query(Pago).filter(Pago.fecha_pago == fecha_pago)
+def get_pago_by_fecha_pago(db: Session, fecha_pago: str) -> list [Pago] | None:
+    return db.query(Pago).filter(Pago.fecha_pago == fecha_pago).all()
 
 def remove_pago_by_numero_recibo(db: Session, numero_recibo: str) -> Pago | None:
     pago = db.query(Pago).filter(Pago.numero_recibo == numero_recibo).first()

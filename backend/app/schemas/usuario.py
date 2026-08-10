@@ -4,6 +4,7 @@ from typing import Optional
 class UsuarioBase(BaseModel):
     nombre_completo: str
     username: str
+    email: str
     estado: bool = True
 
 class UsuarioCreate(UsuarioBase):
@@ -12,6 +13,7 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioUpdate(BaseModel):
     nombre_completo: Optional[str] = None
     username: Optional[str] = None
+    email: Optional[str] = None
     password: Optional[str] = None
     estado: Optional[bool] = None
 

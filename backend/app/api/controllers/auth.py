@@ -4,11 +4,11 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.config import settings
 from app.schemas.auth import RecuperarPassword, ResetearPassword, Token
-from backend.app.api.deps import get_db
+from app.api.deps import get_db
 from sqlalchemy.orm import Session
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username
-from backend.app.services.email import enviar_email_recuperacion
+from app.services.email import enviar_email_recuperacion
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 

@@ -4,8 +4,8 @@ from fastapi.security import OAuth2PasswordBearer
 import jwt
 from sqlalchemy.orm import Session
 
-from backend.app.db.session import SessionLocal
-from backend.app.models import Usuario
+from app.db.session import SessionLocal
+from app.models import Usuario
 from app.core.config import settings
 from app.crud.crud_usuario import get_usuario_by_id
 

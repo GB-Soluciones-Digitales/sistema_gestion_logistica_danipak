@@ -1,0 +1,18 @@
+from pydantic import BaseModel, ConfigDict
+from typing import Optional, Any
+from datetime import datetime
+
+class AuditoriaBase(BaseModel):
+    usuario_id: int
+    accion: str
+    tabla_afectada: str
+    registro_id: int
+    detalles_cambio: Optional[dict[str, Any]] = None
+    fecha: datetime
+
+class AuditoriaCreate(AuditoriaBase):
+    pass
+
+class AuditoriaResponse(AuditoriaBase):
+    id: int
+    model_config = ConfigDict(from_attributes=True)

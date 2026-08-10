@@ -15,4 +15,4 @@ class Usuario(Base):
     facturas = relationship("Factura", back_populates="usuario")
     movimientos_cc = relationship("MovimientoCC", back_populates="usuario")
     pagos = relationship("Pago", back_populates="usuario")
-    # auditoria = relationship("Auditoria", back_populates="usuario")
+    auditoria = relationship("Auditoria", back_populates="usuario")

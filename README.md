@@ -50,3 +50,5 @@ La documentación completa se encuentra en la carpeta `Documentacion`, en el PDF
 ## Contacto
 
 Para dudas o apoyo sobre el proyecto, consultar al responsable del desarrollo o al equipo de soporte asignado.
+
+---

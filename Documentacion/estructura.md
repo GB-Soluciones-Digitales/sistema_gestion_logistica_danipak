@@ -42,10 +42,11 @@ backend/
 │   │   ├── auth.py          
 │   │   └── usuario.py
 │   │
-│   └── services/            # Toda la logica externa
-│       └── email.py         # Ejemplo, logica para mandar mail de recuperacion
-│
-├── main.py                  
+│   ├── services/            # Toda la logica externa
+│   │   └── email.py         # Ejemplo, logica para mandar mail de recuperacion
+│   │
+│   └── main.py
+│                  
 ├── requirements.txt
 ├── .env
 ├── alembic.ini

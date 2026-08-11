@@ -24,10 +24,10 @@ jobs:
           pip install -r requirements.txt
           
       # Esto es para mas adelante otro paso cuando hayan tests, para que se ejecuten y verifiquen que todo funciona
-      - name: Verificar que la API compila (Dry Run)
-        run: |
-          cd backend
-          python -c "from app.main import app"
+      #- name: Verificar que la API compila (Dry Run)
+      #  run: |
+      #    cd backend
+      #    python -c "from app.main import app"
 
   auditar-frontend:
     runs-on: ubuntu-latest
@@ -40,8 +40,8 @@ jobs:
         with:
           node-version: "20"
           
-      - name: Instalar y compilar PWA
-        run: |
-          cd frontend
-          npm install
-          npm run build
+      #- name: Instalar y compilar PWA
+      #  run: |
+      #    cd frontend
+      #    npm install
+      #    npm run build

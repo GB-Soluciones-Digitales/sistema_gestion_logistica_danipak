@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from app.models.Auditoria import Auditoria
 from app.schemas.auditoria import AuditoriaCreate
 

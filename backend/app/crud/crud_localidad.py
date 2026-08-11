@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+
 from app.models.Localidad import Localidad
 from app.schemas.localidad import LocalidadCreate, LocalidadUpdate
 

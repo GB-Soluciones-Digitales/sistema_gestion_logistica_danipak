@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, ForeignKey, DECIMAL
+from sqlalchemy import Boolean, Column, String, DateTime, Integer, ForeignKey, DECIMAL
 from sqlalchemy.orm import relationship
 from app.db.base import Base 
 
@@ -12,6 +12,7 @@ class Pago(Base):
     metodo_pago = Column(String, nullable=False)
     url_respaldo_pdf = Column(String, nullable=True)
     fecha_pago = Column(DateTime, nullable=False)
+    anulado = Column(Boolean, default=False, nullable=False)
     usuario_creador_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
     cliente = relationship("Cliente", back_populates="pagos")

@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
+from pwdlib.hashers.bcrypt import BcryptHasher
 import jwt
 
 from app.core.config import settings
 
 # Se usa para encriptar y desencriptar contraseñas.
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = PasswordHash((BcryptHasher(),))
 
 # Esta funcion se usa para verificar si la contraseña ingresada por el usuario es igual a la que esta en la base de datos
 def verify_password(plain_password: str, hashed_password: str) -> bool:

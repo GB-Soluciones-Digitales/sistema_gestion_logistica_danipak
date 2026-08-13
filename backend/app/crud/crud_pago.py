@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.models.Pago import Pago
 from app.schemas.pago import PagoCreate, PagoUpdate
+from app.schemas.auditoria import AuditoriaCreate
+from app.crud.crud_auditoria import create_auditoria_log
 
 # Lauti te lo explico aca en pagos pero aplica para todos los cruds.
 def get_pago_by_id(db: Session, pago_id: int) -> Pago | None:
@@ -19,12 +22,23 @@ def create_pago(db: Session, pago: PagoCreate, usuario_id: int) -> Pago:
     db.add(db_pago)
     db.commit()
     db.refresh(db_pago)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="INSERT",
+        tabla_afectada="pagos",
+        registro_id=db_pago.id,
+        detalles_cambio=pago_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_pago
 
 def get_pago_by_numero_recibo(db: Session, numero_recibo: str) -> Pago | None:
     return db.query(Pago).filter(Pago.numero_recibo == numero_recibo).first()
 
-def update_pago(db: Session, db_pago: Pago, pago_in: PagoUpdate) -> Pago:
+def update_pago(db: Session, db_pago: Pago, pago_in: PagoUpdate, usuario_id: int) -> Pago:
     # exclude_unset=True garantiza que solo se actualicen los campos enviados, sin pisar con nulos.
     update_data = pago_in.model_dump(exclude_unset=True)
     
@@ -35,14 +49,36 @@ def update_pago(db: Session, db_pago: Pago, pago_in: PagoUpdate) -> Pago:
     db.add(db_pago)
     db.commit()
     db.refresh(db_pago)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="UPDATE",
+        tabla_afectada="pagos",
+        registro_id=db_pago.id,
+        detalles_cambio=update_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_pago
 
-def anular_pago(db: Session, pago_id: int) -> Pago | None:
+def anular_pago(db: Session, pago_id: int, usuario_id: int) -> Pago | None:
     db_pago = db.query(Pago).filter(Pago.id == pago_id).first()
     if db_pago:
         db_pago.anulado = True
         db.add(db_pago)
         db.commit()
         db.refresh(db_pago)
+
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="UPDATE",
+            tabla_afectada="pagos",
+            registro_id=db_pago.id,
+            detalles_cambio={"anulado": True},
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
+
         return db_pago
     return None

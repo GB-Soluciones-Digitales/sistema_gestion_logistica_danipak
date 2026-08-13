@@ -4,6 +4,8 @@ from app.models.Usuario import Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioUpdate
 from app.core.security import get_password_hash
 
+
+
 def get_usuario_by_id(db: Session, usuario_id: int) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.id == usuario_id).first()
 

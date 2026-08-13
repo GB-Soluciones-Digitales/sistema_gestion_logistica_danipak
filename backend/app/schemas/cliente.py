@@ -4,9 +4,10 @@ from typing import Optional
 class ClienteBase(BaseModel):
     razon_social: str
     cuit_dni: str
+    direccion: Optional[str] = None
     telefono: Optional[str] = None
     email: Optional[str] = None
-    activo: bool = True
+    estado: bool = True
 
 class ClienteCreate(ClienteBase):
     pass
@@ -14,9 +15,10 @@ class ClienteCreate(ClienteBase):
 class ClienteUpdate(BaseModel):
     razon_social: Optional[str] = None
     cuit_dni: Optional[str] = None
+    direccion: Optional[str] = None
     telefono: Optional[str] = None
     email: Optional[str] = None
-    activo: Optional[bool] = None
+    estado: Optional[bool] = None
 
 class ClienteResponse(ClienteBase):
     id: int

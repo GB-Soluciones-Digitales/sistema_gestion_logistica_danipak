@@ -17,7 +17,7 @@ class ComprobanteBase(BaseModel):
     localidad_destinatario_id: int
     
     cantidad_bultos: int
-    condicion_pago: str
+    importe_contra_reembolso: Optional[Decimal] = None
     importe_flete_pago: Optional[Decimal] = None
     importe_flete_cobro: Optional[Decimal] = None
     

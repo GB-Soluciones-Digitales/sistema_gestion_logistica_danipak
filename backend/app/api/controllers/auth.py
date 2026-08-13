@@ -8,7 +8,8 @@ from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.schemas.auth import RecuperarPassword, ResetearPassword, Token
 from app.api.deps import get_db
-from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username
+from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username, update_usuario
+from app.schemas.usuario import UsuarioUpdate
 from app.services.email import enviar_email_recuperacion
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
@@ -48,7 +49,7 @@ def solicitar_recuperacion(datos: RecuperarPassword, db: Session = Depends(get_d
             expires_delta=expiracion
         )
 
-    enviar_email_recuperacion(email_destino=user.email, token=token_recuperacion)
+        enviar_email_recuperacion(email_destino=user.email, token=token_recuperacion)
     
     return {"mensaje": "Si el correo está registrado, recibirás un enlace de recuperación."}
 
@@ -72,7 +73,7 @@ def restablecer_password(datos: ResetearPassword, db: Session = Depends(get_db))
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
     # la Hasheamos y actualizamos la contraseña
-    user.password_hash = get_password_hash(datos.nueva_password)
-    db.commit()
+    update_data = UsuarioUpdate(password=datos.nueva_password)
+    update_usuario(db=db, db_usuario=user, usuario_in=update_data)
     
     return {"mensaje": "Contraseña actualizada exitosamente"}

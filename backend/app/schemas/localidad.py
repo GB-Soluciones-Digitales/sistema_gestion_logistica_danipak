@@ -3,7 +3,7 @@ from typing import Optional
 
 class LocalidadBase(BaseModel):
     nombre: str
-    codigo_postal: str
+    codigo_postal: Optional[str] = None
     estado: bool = True
 
 class LocalidadCreate(LocalidadBase):

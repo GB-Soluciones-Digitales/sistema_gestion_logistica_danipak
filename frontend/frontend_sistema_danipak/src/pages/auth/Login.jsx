@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
+import LogoExtendido from '../assets/logo-extendido.svg';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -21,7 +22,12 @@ export default function Login() {
       <div className="w-full max-w-md bg-card rounded-lg shadow-sm border border-border p-8">
         
         {/* Encabezado */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img 
+            src={LogoExtendido} 
+            alt="DaniPak Logo" 
+            className="h-10 mb-4" 
+          />
           <h1 className="text-3xl font-display font-bold text-foreground">
             Bienvenido
           </h1>

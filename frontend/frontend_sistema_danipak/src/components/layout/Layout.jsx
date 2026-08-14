@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X } from 'lucide-react';
+
+import LogoExtendido from '../assets/logo-extendido.svg';
+import Isotipo from '../assets/isotipo.svg';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -48,7 +51,7 @@ export default function Layout({ children }) {
       
       <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground border-b border-sidebar-border z-20">
         <div className="font-display font-bold text-xl tracking-tight text-sidebar-primary-foreground">
-          DaniPak
+          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-8" />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -67,7 +70,7 @@ export default function Layout({ children }) {
         `}
       >
         <div className="hidden md:flex items-center h-16 px-6 border-b border-sidebar-border font-display font-bold text-2xl text-sidebar-primary-foreground">
-          DaniPak
+          <img src={LogoExtendido} alt="DaniPak Logo" className="h-8" />
         </div>
 
         <nav className="flex-1 py-6 overflow-y-auto">

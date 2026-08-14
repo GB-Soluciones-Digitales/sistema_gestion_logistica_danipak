@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-import Login from './pages/Login';
-import OlvidePassword from './pages/OlvidePassword';
-import Dashboard from './pages/Dashboard';
-import NotFound from './pages/NotFound';
+import Login from "./pages/auth/Login";
+import OlvidePassword from "./pages/auth/OlvidePassword";
+import NotFound from "./pages/error/NotFound";
+import Comprobantes from "./pages/operaciones/Comprobantes";
 
 export default function App() {
   return (
@@ -22,7 +22,7 @@ export default function App() {
           {/* Rutas Protegidas*/}
           {/* Todas las rutas dentro de este bloque van a exigir token */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Comprobantes />} />
           </Route>
 
           {/* Fallback */}

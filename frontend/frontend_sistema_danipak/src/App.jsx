@@ -1,10 +1,11 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
-// Vistas
 import Login from './pages/Login';
+import OlvidePassword from './pages/OlvidePassword';
 import Dashboard from './pages/Dashboard';
+import NotFound from './pages/NotFound';
 
 export default function App() {
   return (
@@ -16,6 +17,7 @@ export default function App() {
           
           {/* Rutas Publicas */}
           <Route path="/login" element={<Login />} />
+          <Route path="/olvide-password" element={<OlvidePassword />} />
 
           {/* Rutas Protegidas*/}
           {/* Todas las rutas dentro de este bloque van a exigir token */}
@@ -25,7 +27,7 @@ export default function App() {
 
           {/* Fallback */}
           {/* Si alguien ingresa una URL que no existe va a ser redirigido al inicio */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<NotFound />} />
 
         </Routes>
       </BrowserRouter>

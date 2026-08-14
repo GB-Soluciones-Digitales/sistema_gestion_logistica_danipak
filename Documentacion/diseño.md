@@ -77,19 +77,6 @@
 - **Line-height cuerpo:** `leading-relaxed` (1.6)
 - **Números en tablas:** Inter con `tabular-nums` para alinear montos.
 
-Import en Next.js (`app/layout.tsx`):
-
-```ts
-import { Inter, Plus_Jakarta_Sans } from "next/font/google"
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--font-jakarta",
-})
-```
-
 ---
 
 ## Otros tokens

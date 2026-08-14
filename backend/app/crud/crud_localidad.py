@@ -1,14 +1,29 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.models.Localidad import Localidad
 from app.schemas.localidad import LocalidadCreate, LocalidadUpdate
+from app.schemas.auditoria import AuditoriaCreate
+from app.crud.crud_auditoria import create_auditoria_log
 
-def create_localidad(db: Session, localidad: LocalidadCreate) -> Localidad:
-    db_localidad = Localidad(**localidad.model_dump())
+def create_localidad(db: Session, localidad: LocalidadCreate, usuario_id: int) -> Localidad:
+    localidad_data = localidad.model_dump()
+    db_localidad = Localidad(**localidad_data)
     
     db.add(db_localidad)
     db.commit()
     db.refresh(db_localidad)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="INSERT",
+        tabla_afectada="localidades",
+        registro_id=db_localidad.id,
+        detalles_cambio=localidad_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_localidad
 
 def get_localidad_by_id(db: Session, localidad_id: int) -> Localidad | None:
@@ -17,7 +32,7 @@ def get_localidad_by_id(db: Session, localidad_id: int) -> Localidad | None:
 def get_localidades(db: Session, skip: int = 0, limit: int = 100):
     return db.query(Localidad).offset(skip).limit(limit).all()
 
-def update_localidad(db: Session, db_localidad: Localidad, localidad_in: LocalidadUpdate) -> Localidad:
+def update_localidad(db: Session, db_localidad: Localidad, localidad_in: LocalidadUpdate, usuario_id: int) -> Localidad:
     update_data = localidad_in.model_dump(exclude_unset=True)
     
     for key, value in update_data.items():
@@ -26,4 +41,15 @@ def update_localidad(db: Session, db_localidad: Localidad, localidad_in: Localid
     db.add(db_localidad)
     db.commit()
     db.refresh(db_localidad)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="UPDATE",
+        tabla_afectada="localidades",
+        registro_id=db_localidad.id,
+        detalles_cambio=update_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_localidad

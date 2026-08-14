@@ -1,5 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from "../context/AuthContext";
+import Layout from './Layout';
 
 export default function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
@@ -10,5 +11,9 @@ export default function ProtectedRoute() {
   }
 
   // Si esta autenticado, renderiza la ruta hija
-  return <Outlet />;
+  return (
+    <Layout>
+      <Outlet />
+    </Layout>
+  );
 }

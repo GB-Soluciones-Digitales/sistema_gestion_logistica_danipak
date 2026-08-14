@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/axios';
+import api from '../../api/axios';
+import LogoExtendido from '../assets/logo-extendido.svg';
 
 export default function OlvidePassword() {
   const [email, setEmail] = useState('');
@@ -25,7 +26,12 @@ export default function OlvidePassword() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md bg-card rounded-lg shadow-sm border border-border p-8">
         
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <img 
+            src={LogoExtendido} 
+            alt="DaniPak Logo" 
+            className="h-10 mb-4" 
+          />
           <h1 className="text-2xl font-display font-bold text-foreground">
             Recuperar Contraseña
           </h1>

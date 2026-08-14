@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/axios';
-import LogoExtendido from '../assets/logo-extendido.svg';
+import LogoExtendido from '../../assets/logo-extendido.svg';
 
 export default function OlvidePassword() {
   const [email, setEmail] = useState('');

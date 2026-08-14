@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X } from 'lucide-react';
 
-import LogoExtendido from '../assets/logo-extendido.svg';
-import Isotipo from '../assets/isotipo.svg';
+import LogoExtendido from '../../assets/logo-extendido.svg';
+import Isotipo from '../../assets/isotipo.svg';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

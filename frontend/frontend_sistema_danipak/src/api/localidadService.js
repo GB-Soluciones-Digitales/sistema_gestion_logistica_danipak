@@ -3,14 +3,14 @@ import api from "./axios.js";
 export const localidadService = {
 
     createLocalidad: async (data) => {
-        const response = await api.post('/api/localidades', data);
+        const response = await api.post('/api/localidades/', data);
         return response.data;
     },
 
     getAll: async (page = 1, limit = 10, search = "") => {
         const skip = (page - 1) * limit; 
         
-        const response = await api.get('/api/localidades', { 
+        const response = await api.get('/api/localidades/', { 
             params: { skip, limit, search } 
         });
         return response.data;

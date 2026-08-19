@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { localidadService } from '../../api/localidadService';
 
 import Button from '../../components/ui/Button';
@@ -45,6 +46,7 @@ export default function Localidades() {
             setLocalidades(data.items);
             setTotalRegistros(data.total);
         } catch (err) {
+            toast.error('Error al cargar las localidades')
             console.error('Error al cargar localidades', err);
         } finally {
             setLoading(false);
@@ -81,13 +83,15 @@ export default function Localidades() {
         try {
             if (modoEdicion) {
                 await localidadService.updateLocalidad(idSeleccionado, formData);
+                toast.success("Localidad actualizada correctamente");
             } else {
                 await localidadService.createLocalidad(formData);
+                toast.success("Localidad creada con éxito");
             }
             setIsModalOpen(false);
             fetchLocalidades();
         } catch (err) {
-            alert("Error al guardar la localidad.");
+            toast.error("Error al guardar la localidad. Revisá los datos.");
             console.error('Error al guardar', err)
         }
     };

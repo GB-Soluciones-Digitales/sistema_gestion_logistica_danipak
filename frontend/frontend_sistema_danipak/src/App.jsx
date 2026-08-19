@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -14,6 +15,8 @@ export default function App() {
     <AuthProvider>
       {/* El Router maneja la navegacion en el navegador */}
       <BrowserRouter>
+        <Toaster richColors position="top-right" />
+        
         <Routes>
           
           {/* Rutas Publicas */}

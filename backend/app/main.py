@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.controllers import auth
+from app.api.controllers import auth, auditoria, clientes, comprobantes, facturas, localidad, movimientos_cc, pagos, usuarios
 from app.models import Comprobante, Usuario, Cliente, Localidad, Auditoria, Factura, MovimientoCC, Pago
 
 app = FastAPI()
@@ -19,7 +19,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auditoria.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
+app.include_router(clientes.router, prefix="/api")
+app.include_router(comprobantes.router, prefix="/api")
+app.include_router(facturas.router, prefix="/api")
+app.include_router(localidad.router, prefix="/api")
+app.include_router(movimientos_cc.router, prefix="/api")
+app.include_router(pagos.router, prefix="/api")
+app.include_router(usuarios.router, prefix="/api")
     
 @app.get("/")
 def read_root():

@@ -29,8 +29,17 @@ def create_localidad(db: Session, localidad: LocalidadCreate, usuario_id: int) -
 def get_localidad_by_id(db: Session, localidad_id: int) -> Localidad | None:
     return db.query(Localidad).filter(Localidad.id == localidad_id).first()
 
-def get_localidades(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(Localidad).offset(skip).limit(limit).all()
+def get_localidades(db: Session, skip: int = 0, limit: int = 10, search: str = None):
+    query = db.query(Localidad)
+
+    if search:
+        query = query.filter(Localidad.nombre.ilike(f"%{search}%"))
+
+    total = query.count()
+
+    items = query.offset(skip).limit(limit).all()
+    
+    return {"total": total, "items": items}
 
 def update_localidad(db: Session, db_localidad: Localidad, localidad_in: LocalidadUpdate, usuario_id: int) -> Localidad:
     update_data = localidad_in.model_dump(exclude_unset=True)

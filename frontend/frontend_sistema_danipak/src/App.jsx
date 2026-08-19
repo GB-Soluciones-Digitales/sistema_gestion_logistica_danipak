@@ -6,6 +6,7 @@ import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
 import NotFound from "./pages/error/NotFound";
 import Comprobantes from "./pages/operaciones/Comprobantes";
+import Localidades from "./pages/operaciones/Localidades";
 
 export default function App() {
   return (
@@ -23,6 +24,8 @@ export default function App() {
           {/* Todas las rutas dentro de este bloque van a exigir token */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<Comprobantes />} />
+            <Route path="/comprobantes" element={<Comprobantes />} />
+            <Route path="/localidades" element={<Localidades />} />
           </Route>
 
           {/* Fallback */}

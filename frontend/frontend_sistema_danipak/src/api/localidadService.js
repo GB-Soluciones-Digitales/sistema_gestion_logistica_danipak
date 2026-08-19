@@ -1,5 +1,4 @@
-
-import { api } from "./axios.js";
+import api from "./axios.js";
 
 export const localidadService = {
 
@@ -8,8 +7,12 @@ export const localidadService = {
         return response.data;
     },
 
-    getAll: async () => {
-        const response = await api.get('/localidades');
+    getAll: async (page = 1, limit = 10, search = "") => {
+        const skip = (page - 1) * limit; 
+        
+        const response = await api.get('/localidades', { 
+            params: { skip, limit, search } 
+        });
         return response.data;
     },
     

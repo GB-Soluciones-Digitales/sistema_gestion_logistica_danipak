@@ -1,0 +1,42 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_db, get_current_user
+from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCResponse
+from app.crud import crud_movimientoCC
+
+router = APIRouter(prefix="/movimientos", tags=["Movimientos CC"])
+
+@router.post("/", response_model=MovimientoCCResponse, status_code=status.HTTP_201_CREATED)
+def create_movimiento(movimiento_in: MovimientoCCCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    return crud_movimientoCC.create_movimiento_cc(db=db, movimiento=movimiento_in, usuario_id=current_user.id)
+
+@router.get("/cliente/{cliente_id}", response_model=list[MovimientoCCResponse])
+def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_movimientos_by_cliente(db=db, cliente_id=cliente_id, skip=skip, limit=limit)
+
+@router.get("/{movimiento_id}", response_model=MovimientoCCResponse)
+def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
+    movimiento = crud_movimientoCC.get_movimiento_by_id(db, movimiento_id)
+    if not movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
+    return movimiento
+
+@router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
+def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    db_movimiento = crud_movimientoCC.get_movimiento_by_id(db, movimiento_id)
+    if not db_movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
+    
+    if db_movimiento.anulado:
+        raise HTTPException(status_code=400, detail="El movimiento ya se encuentra anulado.")
+    
+    return crud_movimientoCC.anular_movimiento_cc(db=db, db_movimiento=db_movimiento, usuario_id=current_user.id)
+
+@router.put("/{movimiento_id}", response_model=MovimientoCCResponse)
+def update_movimiento(movimiento_id: int, movimiento_in: MovimientoCCCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    db_movimiento = crud_movimientoCC.get_movimiento_by_id(db, movimiento_id)
+    if not db_movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
+    
+    return crud_movimientoCC.update_movimiento_cc(db=db, db_movimiento=db_movimiento, movimiento_in=movimiento_in, usuario_id=current_user.id)

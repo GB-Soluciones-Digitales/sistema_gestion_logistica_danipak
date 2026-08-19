@@ -1,24 +1,26 @@
-from crud import crud_auditoria
-from fastapi import APIRouter
-from models import Auditoria
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix = "/api")
-crud = crud_auditoria()
+from app.api.deps import get_current_user, get_db
+from app.crud import crud_auditoria
+from app.schemas.auditoria import AuditoriaResponse, AuditoriaCreate
 
-@router.get("/auditorias/{auditoria_id}", response_model = Auditoria)
-def get_auditoria_by_registro_id(auditoria_id: int):
-    db_auditoria = crud.get_auditoria_by_id(auditoria_id)
-    if db_auditoria is None:
-        return {"error": "Auditoría no encontrada"}
-    return db_auditoria
+router = APIRouter(prefix="/auditoria", tags=["Auditoría"])
 
-@router.get("/auditorias", response_model = list[Auditoria])
-def get_auditorias(skip: int = 0, limit: int = 100):
-    return crud.get_auditorias(skip=skip, limit=limit)
+@router.get("/", response_model=list[AuditoriaResponse])
+def get_auditoria_logs(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud_auditoria.get_auditoria_logs(db, skip=skip, limit=limit)
 
-@router.put("/auditorias/{auditoria_id}", response_model = Auditoria)
-def update_auditoria(auditoria_id: int, auditoria: Auditoria):
-    db_auditoria = crud.get_auditoria_by_id(auditoria_id)
-    if db_auditoria is None:
-        return {"error": "La auditoría no existe"}
-    return crud.update_auditoria(db_auditoria, auditoria)
+@router.get("/{tabla}/{registro_id}", response_model=list[AuditoriaResponse])
+def get_auditoria_by_registro(tabla: str, registro_id: int, db: Session = Depends(get_db)):
+    logs = crud_auditoria.get_auditoria_by_registro(db=db, tabla=tabla, registro_id=registro_id)
+    if not logs:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"No se encontraron registros de auditoría para {tabla} con ID {registro_id}"
+        )
+    return logs
+
+@router.post("/", response_model=AuditoriaResponse, status_code=status.HTTP_201_CREATED)
+def create_auditoria_log(auditoria_in: AuditoriaCreate, db: Session = Depends(get_db)):
+    return crud_auditoria.create_auditoria_log(db=db, auditoria=auditoria_in)

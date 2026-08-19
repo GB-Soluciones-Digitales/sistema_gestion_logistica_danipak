@@ -1,28 +1,31 @@
-from crud import crud_localidad
-from fastapi import APIRouter
-from models import Localidad
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-router = APIRouter(prefix="/api")
-crud = crud_localidad()
+from app.api.deps import get_db, get_current_user
+from app.schemas.localidad import LocalidadCreate, LocalidadUpdate, LocalidadResponse
+from app.crud import crud_localidad
 
-@router.get("/localidades/{localidad_id}", response_model = Localidad)
-def get_localidad_by_id(localidad_id: int):
-    db_localidad = crud.get_localidad_by_id(localidad_id)
-    if db_localidad is None:
-        return {"error": "Localidad no encontrada"}
-    return db_localidad
+router = APIRouter(prefix="/localidades", tags=["Localidades"])
 
-@router.get("/localidades", response_model = list[Localidad])
-def get_localidades(skip: int = 0, limit: int = 100):
-    return crud.get_localidades(skip=skip, limit=limit)
+@router.post("/", response_model=LocalidadResponse, status_code=status.HTTP_201_CREATED)
+def create_localidad(localidad_in: LocalidadCreate, db: Session = Depends(get_db)):
+    return crud_localidad.create_localidad(db=db, localidad=localidad_in)
 
-@router.post("/localidades", response_model = Localidad)
-def create_localidad(localidad: Localidad):
-    return crud.create_localidad(localidad)
+@router.get("/", response_model=list[LocalidadResponse])
+def get_localidades(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    return crud_localidad.get_localidades(db=db, skip=skip, limit=limit)
 
-@router.put("/localidades/{localidad_id}", response_model = Localidad)
-def update_localidad(localidad_id: int, localidad: Localidad):
-    db_localidad = crud.get_localidad_by_id(localidad_id)
-    if db_localidad is None:
-        return {"error": "La localidad no existe"}
-    return crud.update_localidad(db_localidad, localidad)
+@router.get("/{localidad_id}", response_model=LocalidadResponse)
+def get_localidad(localidad_id: int, db: Session = Depends(get_db)):
+    localidad = crud_localidad.get_localidad_by_id(db, localidad_id)
+    if not localidad:
+        raise HTTPException(status_code=404, detail="Localidad no encontrada.")
+    return localidad
+
+@router.put("/{localidad_id}", response_model=LocalidadResponse)
+def update_localidad(localidad_id: int, localidad_in: LocalidadUpdate, db: Session = Depends(get_db)):
+    db_localidad = crud_localidad.get_localidad_by_id(db, localidad_id)
+    if not db_localidad:
+        raise HTTPException(status_code=404, detail="Localidad no encontrada.")
+    
+    return crud_localidad.update_localidad(db=db, db_localidad=db_localidad, localidad_in=localidad_in)

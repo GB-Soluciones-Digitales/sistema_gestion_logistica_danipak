@@ -1,7 +1,10 @@
 from sqlalchemy.orm import Session
+from datetime import datetime
 
 from app.models.Factura import Factura
 from app.schemas.factura import FacturaCreate, FacturaUpdate
+from app.schemas.auditoria import AuditoriaCreate
+from app.crud.crud_auditoria import create_auditoria_log
 
 def get_factura_by_id(db: Session, factura_id: int) -> Factura | None:
     return db.query(Factura).filter(Factura.id == factura_id).first()
@@ -19,9 +22,20 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
     db.add(db_factura)
     db.commit()
     db.refresh(db_factura)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="INSERT",
+        tabla_afectada="facturas",
+        registro_id=db_factura.id,
+        detalles_cambio=factura_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_factura
 
-def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate) -> Factura:
+def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate, usuario_id: int) -> Factura:
     update_data = factura_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(db_factura, key, value)
@@ -29,4 +43,15 @@ def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate) 
     db.add(db_factura)
     db.commit()
     db.refresh(db_factura)
+
+    log_data = AuditoriaCreate(
+        usuario_id=usuario_id,
+        accion="UPDATE",
+        tabla_afectada="facturas",
+        registro_id=db_factura.id,
+        detalles_cambio=update_data,
+        fecha=datetime.now()
+    )
+    create_auditoria_log(db, log_data)
+
     return db_factura

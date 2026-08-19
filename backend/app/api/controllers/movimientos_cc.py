@@ -23,7 +23,7 @@ def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
     return movimiento
 
 @router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
-def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
+def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     db_movimiento = crud_movimientoCC.get_movimiento_by_id(db, movimiento_id)
     if not db_movimiento:
         raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
@@ -31,4 +31,12 @@ def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
     if db_movimiento.anulado:
         raise HTTPException(status_code=400, detail="El movimiento ya se encuentra anulado.")
     
-    return crud_movimientoCC.anular_movimiento_cc(db=db, db_movimiento=db_movimiento)
+    return crud_movimientoCC.anular_movimiento_cc(db=db, db_movimiento=db_movimiento, usuario_id=current_user.id)
+
+@router.put("/{movimiento_id}", response_model=MovimientoCCResponse)
+def update_movimiento(movimiento_id: int, movimiento_in: MovimientoCCCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    db_movimiento = crud_movimientoCC.get_movimiento_by_id(db, movimiento_id)
+    if not db_movimiento:
+        raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
+    
+    return crud_movimientoCC.update_movimiento_cc(db=db, db_movimiento=db_movimiento, movimiento_in=movimiento_in, usuario_id=current_user.id)

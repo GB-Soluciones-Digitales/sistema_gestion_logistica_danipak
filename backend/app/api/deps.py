@@ -40,7 +40,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         raise credentials_exception
 
     # Buscamos el usuario en la base de datos, si no existe, lanzamos una excepcion
-    user = get_usuario_by_id(db, user_id=int(user_id))
+    user = get_usuario_by_id(db, int(user_id))
 
     if user is None:
         raise credentials_exception

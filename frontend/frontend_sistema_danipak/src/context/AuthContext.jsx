@@ -6,12 +6,18 @@ const AuthContext = createContext();
 
 {/* Este archivo provee el contexto de autenticación para toda la aplicación */}
 export const AuthProvider = ({ children }) => {
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const skipLogin = import.meta.env.VITE_SKIP_LOGIN === 'true';
+
+  const [token, setToken] = useState(() => {
+    if (skipLogin) return 'dev-token-danipak';
+    return localStorage.getItem('token') || null;
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Determina si el usuario esta autenticado si existe el token
-  const isAuthenticated = !!token;
+  const isAuthenticated = skipLogin || !!token;
 
   const login = async (username, password) => {
     setLoading(true);

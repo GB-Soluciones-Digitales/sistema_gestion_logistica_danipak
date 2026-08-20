@@ -35,3 +35,7 @@ class ComprobanteResponse(ComprobanteBase):
     id: int
     usuario_creador_id: int
     model_config = ConfigDict(from_attributes=True)
+
+class ComprobantePaginatedResponse(BaseModel):
+    total: int
+    items: list[ComprobanteResponse]

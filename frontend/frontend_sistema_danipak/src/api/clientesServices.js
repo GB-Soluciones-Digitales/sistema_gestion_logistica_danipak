@@ -1,24 +1,27 @@
 import api from "./axios";
 
 export const clientesServices = {
-
     createClientes: async (data) => {
-        const response = await api.post('/clientes', data)
+        const response = await api.post('/api/clientes/', data)
         return response.data
     },
 
-    getAll: async () => {
-        const response = await api.get('/clientes')
-        return response.data.items || []
+    getAll: async (page = 1, limit = 10, search = "") => {
+        const skip = (page - 1) * limit; 
+        
+        const response = await api.get('/api/clientes/', { 
+            params: { skip, limit, search } 
+        });
+        return response.data; 
     },
 
     getById: async (id) => {
-        const response = await api.get(`/clientes/${id}`)
+        const response = await api.get(`/api/clientes/${id}`)
         return response.data
     },
 
     updateClientes: async (id, data) => {
-        const response = await api.put(`/clientes/${id}`, data)
+        const response = await api.put(`/api/clientes/${id}`, data)
         return response.data 
     }
 }

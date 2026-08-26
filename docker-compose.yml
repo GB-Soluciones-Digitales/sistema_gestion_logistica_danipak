@@ -17,11 +17,15 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://danipak_user:danipak_password@db:5432/danipak_db
+      - ENV=development
     depends_on:
       - db
 
   frontend:
-    build: ./frontend/frontend_sistema_danipak
+    build: 
+      context: ./frontend/frontend_sistema_danipak
+      args:
+        - VITE_SKIP_LOGIN=true
     ports:
       - "5173:80"
     depends_on:

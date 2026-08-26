@@ -1,11 +1,15 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
 import NotFound from "./pages/error/NotFound";
-import Comprobantes from "./pages/operaciones/Comprobantes";
+import ComprobantesList from './pages/operaciones/comprobantes/ComprobantesList';
+import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
+import ComprobanteView from './pages/operaciones/comprobantes/ComprobanteView';
+import Localidades from "./pages/operaciones/Localidades";
 
 export default function App() {
   return (
@@ -13,6 +17,8 @@ export default function App() {
     <AuthProvider>
       {/* El Router maneja la navegacion en el navegador */}
       <BrowserRouter>
+        <Toaster richColors position="top-right" />
+        
         <Routes>
           
           {/* Rutas Publicas */}
@@ -22,7 +28,11 @@ export default function App() {
           {/* Rutas Protegidas*/}
           {/* Todas las rutas dentro de este bloque van a exigir token */}
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<Comprobantes />} />
+            <Route path="/comprobantes" element={<ComprobantesList />} />
+            <Route path="/comprobantes/nuevo" element={<ComprobanteForm />} />
+            <Route path="/comprobantes/editar/:id" element={<ComprobanteForm />} />
+            <Route path="/comprobantes/:id" element={<ComprobanteView />} />
+            <Route path="/localidades" element={<Localidades />} />
           </Route>
 
           {/* Fallback */}

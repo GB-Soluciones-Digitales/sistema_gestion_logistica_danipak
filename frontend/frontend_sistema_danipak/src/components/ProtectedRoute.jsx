@@ -5,8 +5,11 @@ import Layout from './layout/Layout';
 export default function ProtectedRoute() {
   const { isAuthenticated } = useAuth();
 
+  const skipLogin = import.meta.env.VITE_SKIP_LOGIN === 'true';
+
+
   // Si no esta autenticado, lo enviamos al login reemplazando el historial
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !skipLogin) {
     return <Navigate to="/login" replace />;
   }
 

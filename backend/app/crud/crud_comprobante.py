@@ -1,3 +1,4 @@
+from sqlalchemy import extract, or_
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -29,8 +30,38 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
 def get_comprobante_by_id(db: Session, comprobante_id: int) -> Comprobante | None:
     return db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
 
-def get_comprobantes(db: Session, skip: int = 0, limit: int = 100) -> list[Comprobante]:
-    return db.query(Comprobante).offset(skip).limit(limit).all()
+def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, mes: int = None, cliente_id: int = None, tipo: str = None) -> dict:
+    query = db.query(Comprobante)
+    
+    if search:
+        query = query.filter(
+            or_(
+                Comprobante.numero_comprobante.ilike(f"%{search}%"),
+                Comprobante.nombre_destinatario.ilike(f"%{search}%")
+            )
+        )
+        
+    if tipo:
+        query = query.filter(Comprobante.tipo == tipo)
+        
+    if cliente_id:
+        query = query.filter(Comprobante.cliente_remitente_id == cliente_id)
+        
+    if localidad_id:
+        query = query.filter(
+            or_(
+                Comprobante.localidad_remitente_id == localidad_id,
+                Comprobante.localidad_destinatario_id == localidad_id
+            )
+        )
+        
+    if mes:
+        query = query.filter(extract('month', Comprobante.fecha_emision) == mes)
+        
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    
+    return {"total": total, "items": items}
 
 def get_comprobante_by_numero(db: Session, numero_comprobante: str) -> Comprobante | None:
     return db.query(Comprobante).filter(Comprobante.numero_comprobante == numero_comprobante).first()

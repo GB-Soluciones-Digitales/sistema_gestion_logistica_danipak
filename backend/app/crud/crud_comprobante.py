@@ -69,13 +69,10 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
                 Comprobante.nombre_destinatario.ilike(f"%{search}%")
             )
         )
-        
     if tipo:
         query = query.filter(Comprobante.tipo == tipo)
-        
     if cliente_id:
         query = query.filter(Comprobante.cliente_remitente_id == cliente_id)
-        
     if localidad_id:
         query = query.filter(
             or_(
@@ -83,12 +80,11 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
                 Comprobante.localidad_destinatario_id == localidad_id
             )
         )
-        
     if mes:
         query = query.filter(extract('month', Comprobante.fecha_emision) == mes)
         
     total = query.count()
-    items = query.offset(skip).limit(limit).all()
+    items = query.order_by(Comprobante.fecha_emision.desc()).offset(skip).limit(limit).all()
     
     return {"total": total, "items": items}
 

@@ -13,8 +13,15 @@ def get_pago_by_id(db: Session, pago_id: int) -> Pago | None:
     return db.query(Pago).filter(Pago.id == pago_id).first()
 
 # skip es la cantidad de registros a saltar, y limit es el número maximo de registros a recuperar.
-def get_pagos(db: Session, skip: int = 0, limit: int = 50) -> list[Pago]:
-    return db.query(Pago).order_by(Pago.fecha_pago.desc()).offset(skip).limit(limit).all()
+def get_pagos(db: Session, skip: int = 0, limit: int = 50, search: str = None) -> dict:
+    query = db.query(Pago)
+    
+    if search:
+        query = query.filter(Pago.numero_recibo.ilike(f"%{search}%"))
+        
+    total = query.count()
+    items = query.order_by(Pago.fecha_pago.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def create_pago(db: Session, pago: PagoCreate, usuario_id: int) -> Pago:
     # Convertimos el objeto Pydantic en un diccionario para pasarlo al constructor de Pago. 

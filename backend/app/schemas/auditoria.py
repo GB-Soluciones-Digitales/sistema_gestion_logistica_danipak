@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional, Any
+from typing import List, Optional, Any
 from datetime import datetime
 
 class AuditoriaBase(BaseModel):
@@ -16,3 +16,7 @@ class AuditoriaCreate(AuditoriaBase):
 class AuditoriaResponse(AuditoriaBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class AuditoriaPaginatedResponse(BaseModel):
+    total: int
+    items: List[AuditoriaResponse]

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -21,3 +21,7 @@ class MovimientoCCResponse(MovimientoCCBase):
     id: int
     usuario_creador_id: int
     model_config = ConfigDict(from_attributes=True)
+
+class MovimientoCCPaginatedResponse(BaseModel):
+    total: int
+    items: List[MovimientoCCResponse]

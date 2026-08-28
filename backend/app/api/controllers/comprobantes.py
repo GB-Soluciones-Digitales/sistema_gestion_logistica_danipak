@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -23,7 +25,7 @@ def create_comprobante(comprobante_in: ComprobanteCreate, db: Session = Depends(
     return crud_comprobante.create_comprobante(db=db, comprobante=comprobante_in, usuario_id=current_user.id)
 
 @router.get("/", response_model=ComprobantePaginatedResponse)
-def get_comprobantes(skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, mes: int = None, cliente_id: int = None, tipo: str = None, db: Session = Depends(get_db)):
+def get_comprobantes(skip: int = 0, limit: int = 10, search: Optional[str] = None, localidad_id: Optional[int] = None, mes: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, db: Session = Depends(get_db)):
     return crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, mes=mes, cliente_id=cliente_id, tipo=tipo)
 
 @router.get("/{comprobante_id}", response_model=ComprobanteResponse)

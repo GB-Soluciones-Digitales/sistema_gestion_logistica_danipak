@@ -12,11 +12,15 @@ from app.crud.crud_auditoria import create_auditoria_log
 def get_movimiento_by_id(db: Session, movimiento_id: int) -> MovimientoCC | None:
     return db.query(MovimientoCC).filter(MovimientoCC.id == movimiento_id).first()
 
-def get_movimientos_by_cliente(db: Session, cliente_id: int, skip: int = 0, limit: int = 100) -> list[MovimientoCC]:
-    return db.query(MovimientoCC)\
-             .filter(MovimientoCC.cliente_id == cliente_id)\
-             .order_by(MovimientoCC.fecha_movimiento.desc())\
-             .offset(skip).limit(limit).all()
+def get_movimientos(db: Session, skip: int = 0, limit: int = 100, cliente_id: int = None, anulado: bool = None) -> dict:
+    query = db.query(MovimientoCC).filter(MovimientoCC.cliente_id == cliente_id)
+    
+    if anulado is not None:
+        query = query.filter(MovimientoCC.anulado == anulado)
+        
+    total = query.count()
+    items = query.order_by(MovimientoCC.fecha_movimiento.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def create_movimiento_cc(db: Session, movimiento: MovimientoCCCreate, usuario_id: int) -> MovimientoCC:
     movimiento_data = movimiento.model_dump()

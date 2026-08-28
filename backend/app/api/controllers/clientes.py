@@ -1,9 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.crud import crud_cliente
-from app.schemas.cliente import ClienteResponse, ClienteCreate, ClienteUpdate
+from app.schemas.cliente import ClientePaginatedResponse, ClienteResponse, ClienteCreate, ClienteUpdate
 
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
@@ -15,9 +17,9 @@ def create_cliente(cliente_in: ClienteCreate, db: Session = Depends(get_db), cur
     
     return crud_cliente.create_cliente(db=db, cliente=cliente_in, usuario_id=current_user.id)
 
-@router.get("/", response_model=list[ClienteResponse])
-def get_clientes(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    return crud_cliente.get_clientes(db, skip=skip, limit=limit)
+@router.get("/", response_model=ClientePaginatedResponse)
+def get_clientes(skip: int = 0, limit: int = 50, search: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud_cliente.get_clientes(db, skip=skip, limit=limit, search=search)
 
 @router.get("/{cliente_id}", response_model=ClienteResponse)
 def get_cliente(cliente_id: int, db: Session = Depends(get_db)):

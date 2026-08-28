@@ -1,5 +1,6 @@
 from http.client import HTTPException
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.Usuario import Usuario
@@ -15,8 +16,20 @@ def get_usuario_by_username(db: Session, username: str) -> Usuario | None:
 def get_usuario_by_email(db: Session, email: str) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.email == email).first()
 
-def get_usuarios(db: Session, skip: int = 0, limit: int = 100) -> list[Usuario]:
-    return db.query(Usuario).offset(skip).limit(limit).all()
+def get_usuarios(db: Session, skip: int = 0, limit: int = 100, search: str = None) -> dict:
+    query = db.query(Usuario)
+    
+    if search:
+        query = query.filter(
+            or_(
+                Usuario.username.ilike(f"%{search}%"),
+                Usuario.email.ilike(f"%{search}%")
+            )
+        )
+        
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def create_usuario(db: Session, usuario: UsuarioCreate) -> Usuario:
     try:

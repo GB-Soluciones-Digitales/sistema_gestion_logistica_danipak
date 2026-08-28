@@ -1,4 +1,5 @@
 from http.client import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -38,8 +39,21 @@ def get_cliente_by_id(db: Session, cliente_id: int) -> Cliente | None:
 def get_cliente_by_cuit(db: Session, cuit_dni: str) -> Cliente | None:
     return db.query(Cliente).filter(Cliente.cuit_dni == cuit_dni).first()
 
-def get_clientes(db: Session, skip: int = 0, limit: int = 100) -> list[Cliente]:
-    return db.query(Cliente).offset(skip).limit(limit).all()
+def get_clientes(db: Session, skip: int = 0, limit: int = 100, search: str = None) -> dict:
+    query = db.query(Cliente)
+    
+    if search:
+        query = query.filter(
+            or_(
+                Cliente.razon_social.ilike(f"%{search}%"),
+                Cliente.nombre_fantasia.ilike(f"%{search}%"),
+                Cliente.cuit_dni.ilike(f"%{search}%")
+            )
+        )
+        
+    total = query.count()
+    items = query.offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def update_cliente(db: Session, db_cliente: Cliente, cliente_in: ClienteUpdate, usuario_id: int) -> Cliente | None:
     update_data = cliente_in.model_dump(exclude_unset=True)

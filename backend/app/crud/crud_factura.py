@@ -13,8 +13,17 @@ def get_factura_by_id(db: Session, factura_id: int) -> Factura | None:
 def get_factura_by_numero(db: Session, numero_factura: str) -> Factura | None:
     return db.query(Factura).filter(Factura.numero_factura == numero_factura).first()
 
-def get_facturas(db: Session, skip: int = 0, limit: int = 100) -> list[Factura]:
-    return db.query(Factura).order_by(Factura.fecha.desc()).offset(skip).limit(limit).all()
+def get_facturas(db: Session, skip: int = 0, limit: int = 100, search: str = None, estado: str = None) -> dict:
+    query = db.query(Factura)
+    
+    if search:
+        query = query.filter(Factura.numero_factura.ilike(f"%{search}%"))
+    if estado:
+        query = query.filter(Factura.estado == estado)
+        
+    total = query.count()
+    items = query.order_by(Factura.fecha.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Factura:
     factura_data = factura.model_dump()

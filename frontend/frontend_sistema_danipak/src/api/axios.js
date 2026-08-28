@@ -51,7 +51,10 @@ api.interceptors.response.use(
 
     // Maneja los errores HTTP
     else if (error.response) {
-      if (error.response.status === 401) {
+      if (error.response.status === 429) {
+        toast.error('Demasiados intentos. Por seguridad, espere un minuto antes de volver a intentar.');
+      }
+      else if (error.response.status === 401) {
         toast.error('Su sesión ha expirado.');
         localStorage.removeItem('token');
         window.location.href = '/login';

@@ -16,6 +16,5 @@ def create_auditoria_log(db: Session, auditoria: AuditoriaCreate) -> Auditoria:
     db_auditoria = Auditoria(**auditoria_data)
     
     db.add(db_auditoria)
-    db.commit()
-    db.refresh(db_auditoria)
+    db.flush()
     return db_auditoria

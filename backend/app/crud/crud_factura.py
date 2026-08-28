@@ -1,3 +1,5 @@
+from http.client import HTTPException
+
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -17,41 +19,56 @@ def get_facturas(db: Session, skip: int = 0, limit: int = 100) -> list[Factura]:
 
 def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Factura:
     factura_data = factura.model_dump()
-    db_factura = Factura(**factura_data, usuario_creador_id=usuario_id)
     
-    db.add(db_factura)
-    db.commit()
-    db.refresh(db_factura)
+    try:
+        db_factura = Factura(**factura_data, usuario_creador_id=usuario_id)
+        db.add(db_factura)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="INSERT",
-        tabla_afectada="facturas",
-        registro_id=db_factura.id,
-        detalles_cambio=factura_data,
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="INSERT",
+            tabla_afectada="facturas",
+            registro_id=db_factura.id,
+            detalles_cambio=factura_data,
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_factura
+        db.commit()
+        db.refresh(db_factura)
+        return db_factura
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (create_factura): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al crear la factura.")
 
 def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate, usuario_id: int) -> Factura:
     update_data = factura_in.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_factura, key, value)
-        
-    db.add(db_factura)
-    db.commit()
-    db.refresh(db_factura)
+    
+    try:
+        for key, value in update_data.items():
+            setattr(db_factura, key, value)
+            
+        db.add(db_factura)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="UPDATE",
-        tabla_afectada="facturas",
-        registro_id=db_factura.id,
-        detalles_cambio=update_data,
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="UPDATE",
+            tabla_afectada="facturas",
+            registro_id=db_factura.id,
+            detalles_cambio=update_data,
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_factura
+        db.commit()
+        db.refresh(db_factura)
+        return db_factura
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (update_factura): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al actualizar la factura.")

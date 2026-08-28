@@ -2,6 +2,11 @@ import api from "./axios"
 
 export const comprobantesService = {
 
+    getUltimoNumero: async () => {
+        const response = await api.get('/comprobantes/ultimo-numero');
+        return response.data; 
+    },
+
     createComprobante: async (data) => {
         const response = await api.post('/api/comprobantes/', data);
         return response.data;

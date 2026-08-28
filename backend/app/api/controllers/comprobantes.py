@@ -9,6 +9,11 @@ from app.services.pdf_service import generar_comprobante_pdf
 
 router = APIRouter(prefix="/comprobantes", tags=["Comprobantes"])
 
+@router.get("/ultimo-numero")
+def obtener_ultimo_numero(db: Session = Depends(get_db)):
+    numero = crud_comprobante.get_ultimo_numero_envio(db)
+    return {"ultimo_numero": numero}
+
 @router.post("/", response_model=ComprobanteResponse, status_code=status.HTTP_201_CREATED)
 def create_comprobante(comprobante_in: ComprobanteCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     comprobante_existente = crud_comprobante.get_comprobante_by_numero(db, numero_comprobante=comprobante_in.numero_comprobante)

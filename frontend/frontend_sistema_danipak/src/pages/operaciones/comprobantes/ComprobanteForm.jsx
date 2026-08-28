@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -16,13 +16,20 @@ export default function ComprobanteForm() {
   const [localidades, setLocalidades] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [cargandoNumero, setCargandoNumero] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       estado: 'Emitido',
+      tipo: '',
       cantidad_bultos: 1,
       fecha_emision: new Date().toISOString().split('T')[0] 
     }
+  });
+
+  const tipoSeleccionado = useWatch({
+    control,
+    name: "tipo"
   });
 
   useEffect(() => {
@@ -46,8 +53,8 @@ export default function ComprobanteForm() {
           });
         }
       } catch (error) {
-        toast.error("Error al cargar los datos del formulario.");
-        console.error(error);
+        toast.error("Error al cargar los datos iniciales.");
+        console.log("Error al cargar los datos", error)
       } finally {
         setLoadingData(false);
       }
@@ -55,6 +62,37 @@ export default function ComprobanteForm() {
 
     fetchData();
   }, [id, isEditing, reset]);
+
+  useEffect(() => {
+    if (isEditing) return;
+
+    const calcularProximoNumero = async () => {
+      if (tipoSeleccionado === "Comprobante de Envío") {
+        setCargandoNumero(true);
+        try {
+          const res = await comprobantesService.getUltimoNumero(); 
+          
+          const partes = res.ultimo_numero.split('-');
+          if (partes.length === 2) {
+            const siguienteNumero = parseInt(partes[1], 10) + 1;
+            const nuevoCorrelativo = String(siguienteNumero).padStart(8, '0');
+            const numeroFinal = `${partes[0]}-${nuevoCorrelativo}`;
+            
+            setValue("numero_comprobante", numeroFinal);
+          }
+        } catch (error) {
+          toast.error("Error al obtener el número correlativo");
+          console.error("Error al obtener el número correlativo", error)
+        } finally {
+          setCargandoNumero(false);
+        }
+      } else if (tipoSeleccionado === "Remito") {
+        setValue("numero_comprobante", "");
+      }
+    };
+
+    calcularProximoNumero();
+  }, [tipoSeleccionado, isEditing, setValue]);
 
   const onSubmit = async (data) => {
     try {
@@ -121,14 +159,21 @@ export default function ComprobanteForm() {
               {errors.tipo && <span className="text-destructive text-xs mt-1">{errors.tipo.message}</span>}
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Número *</label>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Número {cargandoNumero && <Loader2 className="inline w-3 h-3 animate-spin text-primary" />} *
+              </label>
               <input 
                 type="text" 
                 {...register("numero_comprobante", { required: "El número es obligatorio" })}
                 placeholder="Ej: 0001-00001234"
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                disabled={tipoSeleccionado === "Comprobante de Envío" || cargandoNumero}
+                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none disabled:opacity-60 disabled:bg-secondary/50 font-medium"
               />
               {errors.numero_comprobante && <span className="text-destructive text-xs mt-1">{errors.numero_comprobante.message}</span>}
+              
+              {tipoSeleccionado === "Comprobante de Envío" && (
+                <p className="text-[10px] text-muted-foreground mt-1">Número asignado automáticamente.</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Fecha de Emisión *</label>

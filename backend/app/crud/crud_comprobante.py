@@ -1,4 +1,6 @@
-from sqlalchemy import extract, or_
+from http.client import HTTPException
+
+from sqlalchemy import desc, extract, or_
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -7,8 +9,35 @@ from app.schemas.comprobante import ComprobanteCreate, ComprobanteUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
 
+def get_ultimo_numero_envio(db: Session) -> str:
+    ultimo = db.query(Comprobante)\
+        .filter(Comprobante.tipo == "Comprobante de Envío")\
+        .order_by(desc(Comprobante.id))\
+        .first()
+        
+    if not ultimo or not ultimo.numero_comprobante:
+        return "0001-00000000"
+        
+    return ultimo.numero_comprobante
+
 def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: int) -> Comprobante:
     comprobante_data = comprobante.model_dump()
+    numero_entrante = comprobante_data.get("numero_comprobante")
+
+    if not numero_entrante:
+        raise HTTPException(status_code=400, detail="El número de comprobante es obligatorio.")
+
+    comprobante_existente = db.query(Comprobante).filter(
+        Comprobante.numero_comprobante == numero_entrante,
+        Comprobante.tipo == comprobante_data["tipo"]
+    ).first()
+
+    if comprobante_existente:
+        raise HTTPException(
+            status_code=409, 
+            detail=f"El número {numero_entrante} ya está registrado. Sincronice y vuelva a intentar."
+        )
+    
     db_comprobante = Comprobante(**comprobante_data, usuario_creador_id=usuario_id)
 
     db.add(db_comprobante)
@@ -69,21 +98,28 @@ def get_comprobante_by_numero(db: Session, numero_comprobante: str) -> Comproban
 def update_comprobante_estado(db: Session, db_comprobante: Comprobante, comprobante_in: ComprobanteUpdate, usuario_id: int) -> Comprobante | None:
     update_data = comprobante_in.model_dump(exclude_unset=True)
     
-    for key, value in update_data.items():
-        setattr(db_comprobante, key, value)
-        
-    db.add(db_comprobante)
-    db.commit()
-    db.refresh(db_comprobante)
+    try:
+        for key, value in update_data.items():
+            setattr(db_comprobante, key, value)
+            
+        db.add(db_comprobante)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="UPDATE",
-        tabla_afectada="comprobantes",
-        registro_id=db_comprobante.id,
-        detalles_cambio=update_data,
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="UPDATE",
+            tabla_afectada="comprobantes",
+            registro_id=db_comprobante.id,
+            detalles_cambio=update_data,
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_comprobante
+        db.commit()
+        db.refresh(db_comprobante)
+        return db_comprobante
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (update_comprobante_estado): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al actualizar el comprobante.")

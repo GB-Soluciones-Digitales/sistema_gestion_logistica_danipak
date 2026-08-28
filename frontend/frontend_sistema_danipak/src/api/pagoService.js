@@ -3,12 +3,15 @@ import api from "./axios.js";
 export const pagoService = {
 
     createPago: async (data) => {
-        const response = await api.post('/pagos', data);
+        const response = await api.post('/pagos/', data);
         return response.data;
     },
 
-    getAll: async () => {
-        const response = await api.get('/pagos');
+    getAll: async (page = 1, limit = 50, search = "") => {
+        const skip = (page - 1) * limit;
+        const response = await api.get('/pagos/', { 
+            params: { skip, limit, search } 
+        });
         return response.data;
     },
 

@@ -17,7 +17,7 @@ export default function App() {
     <AuthProvider>
       {/* El Router maneja la navegacion en el navegador */}
       <BrowserRouter>
-        <Toaster richColors position="top-right" />
+        <Toaster richColors position="top-center" />
         
         <Routes>
           

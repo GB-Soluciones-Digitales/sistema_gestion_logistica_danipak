@@ -3,12 +3,15 @@ import api from "./axios.js";
 export const movimientosService = {
 
     createMovimiento: async (data) => {
-        const response = await api.post('/movimientos', data);
+        const response = await api.post('/movimientos/', data);
         return response.data;
     },
 
-    getAll: async () => {
-        const response = await api.get('/movimientos');
+    getAllByCliente: async (clienteId, page = 1, limit = 100, anulado = null) => {
+        const skip = (page - 1) * limit;
+        const response = await api.get(`/movimientos/cliente/${clienteId}`, { 
+            params: { skip, limit, anulado } 
+        });
         return response.data;
     },
 

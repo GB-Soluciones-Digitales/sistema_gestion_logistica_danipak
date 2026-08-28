@@ -3,7 +3,7 @@ import api from "./axios"
 export const comprobantesService = {
 
     getUltimoNumero: async () => {
-        const response = await api.get('/comprobantes/ultimo-numero');
+        const response = await api.get('/api/comprobantes/ultimo-numero');
         return response.data; 
     },
 
@@ -14,27 +14,15 @@ export const comprobantesService = {
 
     getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
         const skip = (page - 1) * limit;
-
-        const { tipo, cliente_id, localidad_id, mes } = filtros;
-
-        const response = await api.get('/api/comprobantes/', {
-            params: {
-                skip,
-                limit,
-                search,
-                tipo,
-                cliente_id,
-                localidad_id,
-                mes
-            }
+        const response = await api.get('/api/comprobantes/', { 
+            params: { skip, limit, search, ...filtros } 
         });
-
         return response.data;
     },
 
     getById: async (id) => {
-        const response = await api.get(`/api/comprobantes/${id}`)
-        return response.data
+        const response = await api.get(`/api/comprobantes/${id}`);
+        return response.data;
     },
 
     updateEstado: async (id, data) => {

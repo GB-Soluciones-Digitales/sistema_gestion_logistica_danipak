@@ -14,6 +14,18 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    if (config.params) {
+      const cleanParams = {};
+      for (const key in config.params) {
+        const value = config.params[key];
+        if (value !== "" && value !== null && value !== undefined) {
+          cleanParams[key] = value;
+        }
+      }
+      config.params = cleanParams;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

@@ -1,10 +1,12 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 
 // Usamos la variable de entorno, VITE_API_URL, para configurar la URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: BASE_URL,
+  timeout: 10000,
 });
 
 // Intercepta la peticion y le inyecta el token antes de que la petición salga
@@ -35,11 +37,29 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // Si el backend dice "No autorizado", se borra el token y se redirige al login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+    // Detecta si se cae el internet o se cae el backend
+    if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
+      toast.error('Sin conexión al servidor. Verifique su internet o contacte a soporte.', {
+        duration: 5000,
+      });
     }
+
+    // Detecta si esta tardando demasiado
+    else if (error.code === 'ECONNABORTED') {
+      toast.warning('El servidor está tardando demasiado en responder.');
+    }
+
+    // Maneja los errores HTTP
+    else if (error.response) {
+      if (error.response.status === 401) {
+        toast.error('Su sesión ha expirado.');
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      } else if (error.response.status >= 500) {
+         toast.error('Error interno del servidor.');
+      }
+    }
+
     return Promise.reject(error);
   }
 );

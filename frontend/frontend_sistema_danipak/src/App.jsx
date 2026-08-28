@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -12,6 +13,28 @@ import ComprobanteView from './pages/operaciones/comprobantes/ComprobanteView';
 import Localidades from "./pages/operaciones/Localidades";
 
 export default function App() {
+  useEffect(() => {
+    const handleOnline = () => {
+      toast.success('Conexión a internet restaurada. El sistema vuelve a estar en línea.', {
+        duration: 4000,
+      });
+    };
+
+    const handleOffline = () => {
+      toast.error('Se perdió la conexión a internet. Trabajando de forma local.', {
+        duration: 8000, 
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     // El Provider envuelve todo para que el estado global viva en toda la app
     <AuthProvider>

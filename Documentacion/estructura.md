@@ -74,7 +74,8 @@ frontend_sistema_danipak/
 │   ├── pwa-512x512.png             # Icono de alta calidad
 │   └── manifest.webmanifest        # Archivo de configuracion para que se instale offline
 ├── src/
-│   ├── api/                        # Se maneja la conexion al backend
+│   ├── api/
+│   │   ├── comprobantesService.js                      # Se maneja la conexion al backend
 │   │   └── axios.js   
 │   ├── assets/                     # Aca van los logos e imagenes estaticas que se compilan (preferentemente en .svg)
 │   │   └── hero.png

@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 from fastapi import APIRouter
@@ -7,72 +8,97 @@ from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
 
-router = APIRouter(prefix="/movimientoCC", tags=["Movimientos de Cuenta Corriente"])
 
 def get_movimiento_by_id(db: Session, movimiento_id: int) -> MovimientoCC | None:
     return db.query(MovimientoCC).filter(MovimientoCC.id == movimiento_id).first()
 
-def get_movimientos_by_cliente(db: Session, cliente_id: int, skip: int = 0, limit: int = 100) -> list[MovimientoCC]:
-    return db.query(MovimientoCC)\
-             .filter(MovimientoCC.cliente_id == cliente_id)\
-             .order_by(MovimientoCC.fecha_movimiento.desc())\
-             .offset(skip).limit(limit).all()
+def get_movimientos(db: Session, skip: int = 0, limit: int = 100, cliente_id: int = None, anulado: bool = None) -> dict:
+    query = db.query(MovimientoCC).filter(MovimientoCC.cliente_id == cliente_id)
+    
+    if anulado is not None:
+        query = query.filter(MovimientoCC.anulado == anulado)
+        
+    total = query.count()
+    items = query.order_by(MovimientoCC.fecha_movimiento.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def create_movimiento_cc(db: Session, movimiento: MovimientoCCCreate, usuario_id: int) -> MovimientoCC:
     movimiento_data = movimiento.model_dump()
-    db_movimiento = MovimientoCC(**movimiento_data, usuario_creador_id=usuario_id)
     
-    db.add(db_movimiento)
-    db.commit()
-    db.refresh(db_movimiento)
+    try:
+        db_movimiento = MovimientoCC(**movimiento_data, usuario_creador_id=usuario_id)
+        db.add(db_movimiento)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="INSERT",
-        tabla_afectada="movimientos_cc",
-        registro_id=db_movimiento.id,
-        detalles_cambio=movimiento_data,
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="INSERT",
+            tabla_afectada="movimientos_cc",
+            registro_id=db_movimiento.id,
+            detalles_cambio=movimiento_data,
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_movimiento
+        db.commit()
+        db.refresh(db_movimiento)
+        return db_movimiento
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (create_movimiento_cc): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al crear el movimiento.")
 
 def anular_movimiento_cc(db: Session, db_movimiento: MovimientoCC, usuario_id: int) -> MovimientoCC:
-    db_movimiento.anulado = True
-    db.add(db_movimiento)
-    db.commit()
-    db.refresh(db_movimiento)
+    try:
+        db_movimiento.anulado = True
+        db.add(db_movimiento)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="UPDATE",
-        tabla_afectada="movimientos_cc",
-        registro_id=db_movimiento.id,
-        detalles_cambio={"anulado": True},
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="UPDATE",
+            tabla_afectada="movimientos_cc",
+            registro_id=db_movimiento.id,
+            detalles_cambio={"anulado": True},
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_movimiento
+        db.commit()
+        db.refresh(db_movimiento)
+        return db_movimiento
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (anular_movimiento_cc): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al anular el movimiento.")
 
 def update_movimiento_cc(db: Session, db_movimiento: MovimientoCC, movimiento_in: MovimientoCCUpdate, usuario_id: int) -> MovimientoCC:
     movimiento_data = movimiento_in.model_dump(exclude_unset=True)
-    for key, value in movimiento_data.items():
-        setattr(db_movimiento, key, value)
     
-    db.add(db_movimiento)
-    db.commit()
-    db.refresh(db_movimiento)
+    try:
+        for key, value in movimiento_data.items():
+            setattr(db_movimiento, key, value)
+        
+        db.add(db_movimiento)
+        db.flush()
 
-    log_data = AuditoriaCreate(
-        usuario_id=usuario_id,
-        accion="UPDATE",
-        tabla_afectada="movimientos_cc",
-        registro_id=db_movimiento.id,
-        detalles_cambio=movimiento_data,
-        fecha=datetime.now()
-    )
-    create_auditoria_log(db, log_data)
+        log_data = AuditoriaCreate(
+            usuario_id=usuario_id,
+            accion="UPDATE",
+            tabla_afectada="movimientos_cc",
+            registro_id=db_movimiento.id,
+            detalles_cambio=movimiento_data,
+            fecha=datetime.now()
+        )
+        create_auditoria_log(db, log_data)
 
-    return db_movimiento
+        db.commit()
+        db.refresh(db_movimiento)
+        return db_movimiento
+    
+    except Exception as e:
+        db.rollback()
+        print(f"Error BD (update_movimiento_cc): {str(e)}")
+        raise HTTPException(status_code=500, detail="Error interno al actualizar el movimiento.")

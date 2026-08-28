@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -12,7 +14,7 @@ def create_localidad(localidad_in: LocalidadCreate, db: Session = Depends(get_db
     return crud_localidad.create_localidad(db=db, localidad=localidad_in, usuario_id=current_user.id)
 
 @router.get("/", response_model=LocalidadPaginatedResponse)
-def get_localidades(skip: int = 0, limit: int = 10, search: str = None, db: Session = Depends(get_db)):
+def get_localidades(skip: int = 0, limit: int = 10, search: Optional[str] = None, db: Session = Depends(get_db)):
     return crud_localidad.get_localidades(db=db, skip=skip, limit=limit, search=search)
 
 @router.get("/{localidad_id}", response_model=LocalidadResponse)

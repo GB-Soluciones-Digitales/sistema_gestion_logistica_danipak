@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 
 class ClienteBase(BaseModel):
     razon_social: str
@@ -23,3 +23,7 @@ class ClienteUpdate(BaseModel):
 class ClienteResponse(ClienteBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class ClientePaginatedResponse(ClienteBase):
+    total: int
+    items: List[ClienteResponse]

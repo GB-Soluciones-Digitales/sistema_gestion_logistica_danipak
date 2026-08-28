@@ -2,24 +2,39 @@ import api from "./axios"
 
 export const comprobantesService = {
 
-    createComprobante: async (data) => {
-        const response = await api.post('/comprobantes', data)
-        return response.data
+    getUltimoNumero: async () => {
+        const response = await api.get('/api/comprobantes/ultimo-numero');
+        return response.data; 
     },
 
-    getAll: async () => {
-        const response = await api.get('/compobantes')
-        return response.data.items || []
+    createComprobante: async (data) => {
+        const response = await api.post('/api/comprobantes/', data);
+        return response.data;
+    },
+
+    getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
+        const skip = (page - 1) * limit;
+        const response = await api.get('/api/comprobantes/', { 
+            params: { skip, limit, search, ...filtros } 
+        });
+        return response.data;
     },
 
     getById: async (id) => {
-        const response = await api.get(`/comprobantes/${id}`)
-        return response.data
+        const response = await api.get(`/api/comprobantes/${id}`);
+        return response.data;
     },
 
     updateEstado: async (id, data) => {
-        const response = await api.put(`/comprobantes/${id}`, data)
+        const response = await api.put(`/api/comprobantes/${id}`, data)
         return response.data
+    },
+
+    descargarPdf: async (id) => {
+        const response = await api.get(`/comprobantes/${id}/pdf`, {
+            responseType: 'blob'
+        });
+        return response.data;
     }
 
 }

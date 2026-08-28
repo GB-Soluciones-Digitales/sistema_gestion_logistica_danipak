@@ -3,13 +3,14 @@ import api from "./axios";
 export const auditoriaService = {
 
     createAuditoria: async (data) => {
-        const response = await api.post('/auditoria', data)
+        const response = await api.post('/auditoria/', data)
         return response.data
     },
 
-    getAll: async () => {
-        const response = await api.get('/auditoria')
-        return response.data.items || []
+    getAll: async (page = 1, limit = 100, filtros = {}) => {
+        const skip = (page - 1) * limit;
+        const response = await api.get('/auditoria/', { params: { skip, limit, ...filtros } });
+        return response.data;
     },
 
     getById: async (tabla, id) => {

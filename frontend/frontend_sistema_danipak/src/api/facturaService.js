@@ -3,13 +3,16 @@ import api from "./axios.js";
 export const facturaService = {
 
     createFactura: async (data) => {
-        const response = await api.post('/facturas', data)
+        const response = await api.post('/facturas/', data)
         return response.data
     },
 
-    getAll: async () => {
-        const response = await api.get('/facturas')
-        return response.data.items
+    getAll: async (page = 1, limit = 100, search = "", filtros = {}) => {
+        const skip = (page - 1) * limit;
+        const response = await api.get('/facturas/', { 
+            params: { skip, limit, search, ...filtros } 
+        });
+        return response.data;
     },
 
     getbyId: async (id) => {

@@ -1,6 +1,6 @@
 import jwt
 from datetime import timedelta
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -11,11 +11,13 @@ from app.api.deps import get_db
 from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username, update_usuario
 from app.schemas.usuario import UsuarioUpdate
 from app.services.email import enviar_email_recuperacion
+from app.core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 @router.post("/login", response_model=Token)
-def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+@limiter.limit("5/minute")
+def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
 
     # Obtenemos el usuario de la bd
     user = get_usuario_by_username(db, username=form_data.username)

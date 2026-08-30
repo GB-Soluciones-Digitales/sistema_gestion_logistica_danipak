@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { comprobantesService } from '../../../api/comprobantesService';
+import ConfirmDialog from '../../../components/ConfirmDialog'
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 
 export default function ComprobantesList() {
@@ -13,6 +14,7 @@ export default function ComprobantesList() {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
+  const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filtros, setFiltros] = useState({
@@ -70,18 +72,23 @@ export default function ComprobantesList() {
     }
   };
 
-  const handleAnular = async (id) => {
-    if (window.confirm("¿Estás seguro que querés anular este comprobante?")) {
-      try {
-        await comprobantesService.updateEstado(id, { estado: "Anulado" });
-        toast.success("Comprobante anulado");
-        fetchComprobantes();
-      } catch (error) {
-        toast.error("Error al anular");
-        console.log('Error al anular', error)
-      }
+  const handleAnular = (id) => {
+    setComprobanteAAnular(id);
+  };
+
+  const confirmarAnulacion = async () => {
+    const id = comprobanteAAnular;
+    setComprobanteAAnular(null); // cierra el modal ya
+    try {
+      await comprobantesService.updateEstado(id, { estado: "Anulado" });
+      toast.success("Comprobante anulado");
+      fetchComprobantes();
+    } catch (error) {
+      toast.error("Error al anular");
+      console.log('Error al anular', error);
     }
   };
+
 
   const totalPages = Math.ceil(totalRecords / limit);
 
@@ -239,6 +246,17 @@ export default function ComprobantesList() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={comprobanteAAnular !== null}
+        title="¿Anular comprobante?"
+        message="Esta acción no se puede deshacer."
+        confirmText="Sí, anular"
+        variant="danger"
+        onConfirm={confirmarAnulacion}
+        onCancel={() => setComprobanteAAnular(null)}
+      />
+      
     </div>
   );
 }

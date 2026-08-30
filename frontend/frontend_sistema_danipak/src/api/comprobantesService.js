@@ -31,7 +31,7 @@ export const comprobantesService = {
     },
 
     descargarPdf: async (id) => {
-        const response = await api.get(`/comprobantes/${id}/pdf`, {
+        const response = await api.get(`/api/comprobantes/${id}/pdf`, {
             responseType: 'blob'
         });
         return response.data;

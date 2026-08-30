@@ -108,7 +108,9 @@ export default function ComprobanteForm() {
       };
 
       if (isEditing) {
-        toast.info("Función de edición completa requiere ajuste en el backend");
+        await comprobantesService.updateEstado(id, payload);
+        toast.success("Comprobante actualizado exitosamente");
+        navigate('/comprobantes');
       } else {
         await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
@@ -125,7 +127,7 @@ export default function ComprobanteForm() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="space-y-6 pb-10">
       
       {/* Header */}
       <div className="flex items-center gap-4 bg-card p-4 rounded-lg border border-border shadow-sm">
@@ -291,7 +293,7 @@ export default function ComprobanteForm() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-foreg round mb-1 text-primary">Flete a Cobrar ($)</label>
+              <label className="block text-sm font-medium text-foreground mb-1">Flete a Cobrar ($)</label>
               <input 
                 type="number" step="0.01"
                 {...register("importe_flete_cobro")}

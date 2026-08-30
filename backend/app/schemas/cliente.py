@@ -24,6 +24,6 @@ class ClienteResponse(ClienteBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
-class ClientePaginatedResponse(ClienteBase):
+class ClientePaginatedResponse(BaseModel):
     total: int
     items: List[ClienteResponse]

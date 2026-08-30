@@ -49,7 +49,7 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
         accion="INSERT",
         tabla_afectada="comprobantes",
         registro_id=db_comprobante.id,
-        detalles_cambio=comprobante_data,
+        detalles_cambio=comprobante.model_dump(mode="json"),
         fecha=datetime.now()
     )
     create_auditoria_log(db, log_data)
@@ -106,7 +106,7 @@ def update_comprobante_estado(db: Session, db_comprobante: Comprobante, comproba
             accion="UPDATE",
             tabla_afectada="comprobantes",
             registro_id=db_comprobante.id,
-            detalles_cambio=update_data,
+            detalles_cambio=comprobante_in.model_dump(mode="json"),
             fecha=datetime.now()
         )
         create_auditoria_log(db, log_data)

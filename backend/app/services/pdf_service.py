@@ -76,7 +76,7 @@ def dibujar_ticket(c: canvas.Canvas, x_offset: float, y_offset: float, comproban
     c.drawString(3 * mm, y_cuerpo_bottom + 88 * mm, "Remitente")
     c.rect(20 * mm, y_cuerpo_bottom + 86 * mm, 165 * mm, 6 * mm)
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(22 * mm, y_cuerpo_bottom + 87.5 * mm, str(comprobante.cliente.nombre_completo)) 
+    c.drawString(22 * mm, y_cuerpo_bottom + 87.5 * mm, str(comprobante.cliente.razon_social)) 
     
     c.setFont("Helvetica", 9)
     c.drawString(3 * mm, y_cuerpo_bottom + 78 * mm, "Domicilio")

@@ -10,6 +10,8 @@ import NotFound from "./pages/error/NotFound";
 import ComprobantesList from './pages/operaciones/comprobantes/ComprobantesList';
 import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
 import ComprobanteView from './pages/operaciones/comprobantes/ComprobanteView';
+import ClientesList from './pages/operaciones/clientes/ClientesList';
+import ClienteForm from './pages/operaciones/clientes/ClienteForm';
 import Localidades from "./pages/operaciones/Localidades";
 
 export default function App() {
@@ -55,6 +57,9 @@ export default function App() {
             <Route path="/comprobantes/nuevo" element={<ComprobanteForm />} />
             <Route path="/comprobantes/editar/:id" element={<ComprobanteForm />} />
             <Route path="/comprobantes/:id" element={<ComprobanteView />} />
+            <Route path="/clientes" element={<ClientesList />} />
+            <Route path="/clientes/nuevo" element={<ClienteForm />} />
+            <Route path="/clientes/editar/:id" element={<ClienteForm />} />
             <Route path="/localidades" element={<Localidades />} />
           </Route>
 

@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
-import { clientesServices } from '../../api/clientesServices';
+import { toast } from 'sonner'; // Que hace esto? 
+import { clientesServices } from '../../api/clientesServices'; // Esto esta bien!
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import DataTable from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
-import { localidadService } from '../../api/localidadService';
+import { localidadService } from '../../api/localidadService'; // Porque dejaste el service de localidad
 
 
 export default function Clientes(){
@@ -57,7 +57,6 @@ export default function Clientes(){
     },[page, search,limit]);
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchClientes();
     }, [fetchClientes]);
 
@@ -131,11 +130,33 @@ export default function Clientes(){
     const totalPage = Math.ceil(totalRegistros / limit);
 
     return (
-    //Aca se me fundio el marolio pero entendi la mayoria y creo que lo adapte de la manera que corresponde cualquier cosa mañana a la mañana lo vemos despues lo del diseño de la pagina ya me quemaba mucho la cabeza
-    //Depues lo que si medio me quemo pero entendi era eso de darle formato a cuando seleccionas la opicon correccta y la que no 
-    //Despeus se que eso de los label y buttom es tema de como te gusta configurarlo
-    // Despues otra cosa que no entedi muy bien fue lo de definir las colummnas
-    // ATTE MIS DOS HUEVOS 
+        //Aca se me fundio el marolio pero entendi la mayoria y creo que lo adapte de la manera que corresponde cualquier cosa mañana a la mañana lo vemos despues lo del diseño de la pagina ya me quemaba mucho la cabeza
+        //Depues lo que si medio me quemo pero entendi era eso de darle formato a cuando seleccionas la opicon correccta y la que no 
+        //Despeus se que eso de los label y buttom es tema de como te gusta configurarlo
+        // Despues otra cosa que no entedi muy bien fue lo de definir las colummnas
+        // ATTE MIS DOS HUEVOS 
+        <div>
+            {/* Contenedor principal */}
+
+            <div>
+                {/* Aca seria la cabecera - Nombre y Boton */}
+            </div>
+
+            <div>
+                {/* Aca va la busqueda y filtros */}
+            </div>
+
+            <DataTable /> {/* Falta el loading primero pero despues renderiza la tabla */}
+
+            <div>
+                {/* Aca va la paginacion y navegacion */}
+            </div>
+
+            {/* 
+                Aca tenemos dos opciones, la priemra es armar la modal aca.
+                La segunda es crear otra pagina/componente 
+            */}
+        </div>
     );
-    } 
+} 
  

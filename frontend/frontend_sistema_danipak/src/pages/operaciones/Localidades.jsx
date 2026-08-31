@@ -101,23 +101,19 @@ export default function Localidades() {
         { key: 'id', label: 'ID' },
         { key: 'nombre', label: 'Localidad' },
         { key: 'codigo_postal', label: 'CP' },
-        { 
-        key: 'estado', 
-        label: 'Estado',
-        render: (fila) => (
-            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${fila.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {fila.estado ? 'Activa' : 'Inactiva'}
-            </span>
-        )
+        { key: 'estado', label: 'Estado',
+          render: (fila) => (
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${fila.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {fila.estado ? 'Activa' : 'Inactiva'}
+              </span>
+          )
         },
-        { 
-        key: 'acciones', 
-        label: 'Acciones',
-        render: (fila) => (
-            <Button variant="outline" onClick={() => abrirModalEditar(fila)} className="px-2 py-1 h-8">
-            <Edit2 size={16} className="text-muted-foreground" />
-            </Button>
-        )
+        { key: 'acciones', label: 'Acciones',
+          render: (fila) => (
+              <Button variant="outline" onClick={() => abrirModalEditar(fila)} className="px-2 py-1 h-8">
+              <Edit2 size={16} className="text-muted-foreground" />
+              </Button>
+          )
         }
     ];
 

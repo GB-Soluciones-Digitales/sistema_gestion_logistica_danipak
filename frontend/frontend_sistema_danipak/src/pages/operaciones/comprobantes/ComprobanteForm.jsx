@@ -114,8 +114,31 @@ export default function ComprobanteForm() {
         toast.success("Comprobante actualizado exitosamente");
         navigate('/comprobantes');
       } else {
-        await comprobantesService.createComprobante(payload);
+        // 1. Creamos el comprobante y guardamos la respuesta
+        const nuevoComprobante = await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
+        
+        // 2. Intentamos descargar y abrir el PDF automáticamente
+        try {
+          // Asegurate de que tu backend devuelva el ID del comprobante creado en la respuesta
+          const idCreado = nuevoComprobante.id; 
+          
+          if (idCreado) {
+            toast.info("Abriendo comprobante para imprimir...");
+            const blob = await comprobantesService.descargarPdf(idCreado);
+            const url = window.URL.createObjectURL(blob);
+            
+            // Abre el PDF en una pestaña nueva
+            window.open(url, '_blank');
+            
+            // Limpia la memoria después de unos segundos
+            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+          }
+        } catch (pdfError) {
+          console.error("Error al generar PDF automático", pdfError);
+          toast.error("El comprobante se creó, pero falló la apertura automática del PDF.");
+        }
+
         navigate('/comprobantes');
       }
       

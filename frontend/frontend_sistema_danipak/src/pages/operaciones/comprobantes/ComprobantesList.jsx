@@ -206,7 +206,7 @@ export default function ComprobantesList() {
           <DataTable columns={columnas} data={comprobantes} />
         )}
         
-        {!loading && totalPages > 1 && (
+        {!loading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
               Mostrando página {currentPage} de {totalPages}

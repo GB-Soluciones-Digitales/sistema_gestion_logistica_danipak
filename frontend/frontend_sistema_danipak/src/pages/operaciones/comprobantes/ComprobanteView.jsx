@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { comprobantesService } from '../../../api/comprobantesService';
+import { clientesServices } from '../../../api/clientesServices';
+import { localidadService } from '../../../api/localidadService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
 import Button from '../../../components/ui/Button';
 
@@ -13,12 +16,36 @@ export default function ComprobanteView() {
   const [comprobante, setComprobante] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [nombres, setNombres] = useState({ cliente: '', locRemitente: '', locDestinatario: '' });
 
   useEffect(() => {
     const fetchComprobante = async () => {
       try {
         const data = await comprobantesService.getById(id);
         setComprobante(data);
+
+        try {
+          const [clienteData, locRemData, locDestData] = await Promise.all([
+            clientesServices.getById(data.cliente_remitente_id),
+            localidadService.getById(data.localidad_remitente_id),
+            localidadService.getById(data.localidad_destinatario_id)
+          ]);
+
+          setNombres({
+            cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
+            locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
+            locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
+          });
+        } catch (err) {
+          console.error("Error al cargar datos vinculados", err);
+          // Si algo falla, mostramos los IDs como respaldo
+          setNombres({
+            cliente: `ID: ${data.cliente_remitente_id}`,
+            locRemitente: `ID: ${data.localidad_remitente_id}`,
+            locDestinatario: `ID: ${data.localidad_destinatario_id}`
+          });
+        }
+
       } catch (error) {
         console.error(error);
         toast.error("Error al cargar el comprobante.");
@@ -135,16 +162,16 @@ export default function ComprobanteView() {
               Datos del Remitente
             </h3>
             <div>
-              <p className="text-xs text-muted-foreground">Cliente (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.cliente_remitente_id}</p>
+              <p className="text-xs text-muted-foreground">Cliente</p>
+              <p className="font-medium text-foreground">{nombres.cliente}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Domicilio</p>
               <p className="font-medium text-foreground">{comprobante.domicilio_remitente}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Localidad (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.localidad_remitente_id}</p>
+              <p className="text-xs text-muted-foreground">Localidad</p>
+              <p className="font-medium text-foreground">{nombres.locRemitente}</p>
             </div>
           </div>
 
@@ -163,8 +190,8 @@ export default function ComprobanteView() {
               <p className="font-medium text-foreground">{comprobante.domicilio_destinatario}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Localidad (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.localidad_destinatario_id}</p>
+              <p className="text-xs text-muted-foreground">Localidad</p>
+              <p className="font-medium text-foreground">{nombres.locDestinatario}</p>
             </div>
           </div>
         </div>

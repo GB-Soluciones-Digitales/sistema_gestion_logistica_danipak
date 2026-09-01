@@ -189,7 +189,7 @@ export default function Layout({ children }) {
         />
       )}
 
-      <div className="fixed top-4 right-4 z-40 md:top-6 md:right-8">
+      <div className="fixed bottom-4 right-4 z-40 md:top-6 md:right-8">
         {!isOnline ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-destructive/20 bg-destructive/10 text-destructive shadow-sm backdrop-blur-sm">
             <WifiOff size={14} />

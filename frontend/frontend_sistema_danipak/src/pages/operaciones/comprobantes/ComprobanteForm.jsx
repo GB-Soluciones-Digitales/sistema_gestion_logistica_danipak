@@ -127,9 +127,29 @@ export default function ComprobanteForm() {
             toast.info("Abriendo comprobante para imprimir...");
             const blob = await comprobantesService.descargarPdf(idCreado);
             const url = window.URL.createObjectURL(blob);
-            
-            // Abre el PDF en una pestaña nueva
-            window.open(url, '_blank');
+
+            const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;
+            const pdfWindow = window.open('');
+            if (pdfWindow) {
+              pdfWindow.document.write(`
+                <html>
+                  <head>
+                    <title>${titulo}</title>
+                    <style>
+                      body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+                      embed { width: 100vw; height: 100vh; border: none; }
+                    </style>
+                  </head>
+                  <body>
+                    <embed src="${url}" type="application/pdf">
+                  </body>
+                </html>
+              `);
+              
+              pdfWindow.document.close();
+            } else {
+              toast.error("El navegador bloqueó la ventana emergente.");
+            }
             
             // Limpia la memoria después de unos segundos
             setTimeout(() => window.URL.revokeObjectURL(url), 10000);

@@ -65,12 +65,7 @@ export default function ClientesList() {
     },
     { key: 'acciones', label: 'Acciones',
       render: (fila) => (
-        <Button 
-          variant="outline" 
-          onClick={() => navigate(`/clientes/editar/${fila.id}`)} 
-          className="px-2 py-1 h-8" 
-          title="Editar"
-        >
+        <Button variant="outline" onClick={() => navigate(`/clientes/editar/${fila.id}`)} className="px-2 py-1 h-8" title="Editar">
           <Edit2 size={16} className="text-amber-600" />
         </Button>
       )

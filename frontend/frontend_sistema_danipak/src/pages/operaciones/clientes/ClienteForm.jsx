@@ -62,7 +62,7 @@ export default function ClienteForm() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto pb-10">
+    <div className="space-y-6 pb-10">
       <div className="flex items-center gap-4 bg-card p-4 rounded-lg border border-border shadow-sm">
         <button onClick={() => navigate('/clientes')} className="p-2 hover:bg-secondary rounded-full transition-colors text-muted-foreground">
           <ArrowLeft size={20} />

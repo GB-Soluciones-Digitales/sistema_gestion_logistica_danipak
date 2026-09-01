@@ -14,7 +14,7 @@ export default function ComprobantesList() {
   
   const [comprobantes, setComprobantes] = useState([]);
   const [totalRecords, setTotalRecords] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
@@ -106,7 +106,7 @@ export default function ComprobantesList() {
     },
     { key: 'acciones', label: 'Acciones',
       render: (fila) => (
-        <div className="flex gap-1 justify-end">
+        <div className="flex gap-1">
           <Button variant="outline" onClick={() => navigate(`/comprobantes/${fila.id}`)} className="px-2 py-1 h-8" title="Ver">
             <Eye size={16} className="text-blue-600" />
           </Button>
@@ -139,7 +139,7 @@ export default function ComprobantesList() {
         </Button>
       </div>
 
-      <div className="bg-card p-4 rounded-lg border border-border shadow-sm space-y-4">
+      <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
@@ -148,9 +148,10 @@ export default function ComprobantesList() {
               placeholder="Buscar por número o destinatario..." 
               value={searchTerm}
               onChange={handleSearch}
-              className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring text-sm"
             />
           </div>
+
           <Button 
             variant="outline"
             onClick={() => setShowFilters(!showFilters)}
@@ -210,7 +211,7 @@ export default function ComprobantesList() {
             <span className="text-sm text-muted-foreground">
               Mostrando página {currentPage} de {totalPages}
             </span>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Button 
                 variant="outline"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}

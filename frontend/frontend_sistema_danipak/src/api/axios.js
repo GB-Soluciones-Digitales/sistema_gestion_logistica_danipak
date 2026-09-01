@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { toast } from 'sonner';
+import { addToSyncQueue } from '../utils/syncManager';
 
 // Usamos la variable de entorno, VITE_API_URL, para configurar la URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -36,17 +37,24 @@ api.interceptors.request.use(
 // Intercepta la respuesta y maneja errores globales (ej: Token expirado)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // Detecta si se cae el internet o se cae el backend
-    if (error.code === 'ERR_NETWORK' || error.message.includes('Network Error')) {
-      toast.error('Sin conexión al servidor. Verifique su internet o contacte a soporte.', {
-        duration: 5000,
-      });
-    }
+  async (error) => {
+    const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
+    const isPostRequest = error.config?.method?.toLowerCase() === 'post';
 
-    // Detecta si esta tardando demasiado
-    else if (error.code === 'ECONNABORTED') {
-      toast.warning('El servidor está tardando demasiado en responder.');
+    if (isNetworkError) {
+      if (isPostRequest) {
+        await addToSyncQueue(
+          error.config.url,
+          error.config.method,
+          JSON.parse(error.config.data)
+        );
+        toast.warning('Sin conexión. Registro guardado localmente para envío posterior.');
+        
+        // Simula un éxito devolviendo una ID temporal
+        return Promise.resolve({ data: { offline: true, id: 'PENDIENTE-' + Date.now() } });
+      } else {
+        toast.error('Sin conexión al servidor para cargar los datos.');
+      }
     }
 
     // Maneja los errores HTTP

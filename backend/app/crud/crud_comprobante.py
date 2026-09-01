@@ -84,7 +84,10 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
         query = query.filter(extract('month', Comprobante.fecha_emision) == mes)
         
     total = query.count()
-    items = query.order_by(Comprobante.fecha_emision.desc()).offset(skip).limit(limit).all()
+    items = query.order_by(
+        Comprobante.fecha_emision.desc(),
+        Comprobante.numero_comprobante.desc()
+    ).offset(skip).limit(limit).all()
     
     return {"total": total, "items": items}
 

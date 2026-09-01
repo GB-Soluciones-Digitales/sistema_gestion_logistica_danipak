@@ -3,7 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { clientesServices } from '../../../api/clientesServices';
+import Button from '../../../components/ui/Button';
+import Input from '../../../components/ui/Input';
 
 export default function ClienteForm() {
   const { id } = useParams();
@@ -74,48 +77,31 @@ export default function ClienteForm() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="bg-card p-6 rounded-lg border border-border shadow-sm space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Razón Social / Nombre *</label>
-              <input 
-                type="text" 
-                {...register("razon_social", { required: "Este campo es obligatorio" })}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-              {errors.razon_social && <span className="text-destructive text-xs mt-1">{errors.razon_social.message}</span>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">CUIT / DNI *</label>
-              <input 
-                type="text" 
-                {...register("cuit_dni", { required: "Este campo es obligatorio" })}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-              {errors.cuit_dni && <span className="text-destructive text-xs mt-1">{errors.cuit_dni.message}</span>}
-            </div>
+            <Input 
+              label="Razón Social / Nombre *"
+              error={errors.razon_social?.message}
+              {...register("razon_social", { required: "Este campo es obligatorio" })}
+            />
+            <Input 
+              label="CUIT / DNI *"
+              error={errors.cuit_dni?.message}
+              {...register("cuit_dni", { required: "Este campo es obligatorio" })}
+            />
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-foreground mb-1">Dirección</label>
-              <input 
-                type="text" 
+              <Input 
+                label="Dirección"
                 {...register("direccion")}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Teléfono</label>
-              <input 
-                type="text" 
-                {...register("telefono")}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Email</label>
-              <input 
-                type="email" 
-                {...register("email")}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
+            <Input 
+              label="Teléfono"
+              {...register("telefono")}
+            />
+            <Input 
+              type="email"
+              label="Email"
+              {...register("email")}
+            />
           </div>
 
           {isEditing && (
@@ -133,21 +119,13 @@ export default function ClienteForm() {
         </div>
 
         <div className="flex justify-end gap-3">
-          <button 
-            type="button" 
-            onClick={() => navigate('/clientes')}
-            className="px-6 py-2 border border-border rounded-md font-medium text-foreground hover:bg-secondary transition-colors"
-          >
+          <Button type="button" variant="outline" onClick={() => navigate('/clientes')}>
             Cancelar
-          </button>
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
             {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             Guardar Cliente
-          </button>
+          </Button>
         </div>
       </form>
     </div>

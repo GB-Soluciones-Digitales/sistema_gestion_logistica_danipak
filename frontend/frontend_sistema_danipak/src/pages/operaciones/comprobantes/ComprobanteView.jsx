@@ -4,6 +4,7 @@ import { ArrowLeft, Download, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { comprobantesService } from '../../../api/comprobantesService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
+import Button from '../../../components/ui/Button';
 
 export default function ComprobanteView() {
   const { id } = useParams();
@@ -99,14 +100,14 @@ export default function ComprobanteView() {
           </div>
         </div>
 
-        <button 
+        <Button 
           onClick={handleDescargarPdf}
           disabled={downloading}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center gap-2"
         >
           <Download size={18} />
           {downloading ? 'Descargando...' : 'Descargar PDF'}
-        </button>
+        </Button>
       </div>
 
       {/* CUERPO DEL COMPROBANTE */}

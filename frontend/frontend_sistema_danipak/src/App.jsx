@@ -10,6 +10,7 @@ import ComprobantesList from './pages/operaciones/comprobantes/ComprobantesList'
 import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
 import ComprobanteView from './pages/operaciones/comprobantes/ComprobanteView';
 import Localidades from "./pages/operaciones/Localidades";
+import Clientes from "./pages/operaciones/Clientes";
 
 export default function App() {
   return (
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="/comprobantes/editar/:id" element={<ComprobanteForm />} />
             <Route path="/comprobantes/:id" element={<ComprobanteView />} />
             <Route path="/localidades" element={<Localidades />} />
+            <Route path="/clientes" element={<Clientes />} />
           </Route>
 
           {/* Fallback */}

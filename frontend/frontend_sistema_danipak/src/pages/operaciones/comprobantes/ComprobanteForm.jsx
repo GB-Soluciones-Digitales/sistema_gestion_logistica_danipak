@@ -114,11 +114,11 @@ export default function ComprobanteForm() {
         toast.success("Comprobante actualizado exitosamente");
         navigate('/comprobantes');
       } else {
-        // 1. Creamos el comprobante y guardamos la respuesta
+        // Creamos el comprobante y guardamos la respuesta
         const nuevoComprobante = await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
         
-        // 2. Intentamos descargar y abrir el PDF automáticamente
+        // Intentamos descargar y abrir el PDF automáticamente
         try {
           // Asegurate de que tu backend devuelva el ID del comprobante creado en la respuesta
           const idCreado = nuevoComprobante.id; 

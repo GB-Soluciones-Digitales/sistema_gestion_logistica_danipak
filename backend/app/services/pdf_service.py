@@ -86,7 +86,7 @@ def dibujar_ticket(c: canvas.Canvas, x_offset: float, y_offset: float, comproban
     c.drawString(115 * mm, y_cuerpo_bottom + 78 * mm, "Localidad")
     c.rect(132 * mm, y_cuerpo_bottom + 76 * mm, 53 * mm, 6 * mm)
     # Suponiendo que accedés a la relación, si no, ponés el ID
-    loc_remitente = f"ID: {comprobante.localidad_remitente.nombre}" 
+    loc_remitente = f"ID: {comprobante.localidad_remitente_rel.nombre}" 
     c.drawString(134 * mm, y_cuerpo_bottom + 77.5 * mm, loc_remitente)
 
     # --- Fila 2: Destinatario ---
@@ -103,7 +103,7 @@ def dibujar_ticket(c: canvas.Canvas, x_offset: float, y_offset: float, comproban
     
     c.drawString(115 * mm, y_cuerpo_bottom + 58 * mm, "Localidad")
     c.rect(132 * mm, y_cuerpo_bottom + 56 * mm, 53 * mm, 6 * mm)
-    loc_dest = f"ID: {comprobante.localidad_destinatario.nombre}"
+    loc_dest = f"ID: {comprobante.localidad_destinatario_rel.nombre}"
     c.drawString(134 * mm, y_cuerpo_bottom + 57.5 * mm, loc_dest)
 
     # --- Fila 3: Importes y Bultos ---

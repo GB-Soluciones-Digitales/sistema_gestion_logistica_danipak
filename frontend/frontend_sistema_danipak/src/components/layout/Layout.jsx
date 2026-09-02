@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [installPrompt, setInstallPrompt] = useState(null);
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -58,12 +59,19 @@ export default function Layout({ children }) {
       toast.warning('Sin conexión a internet. Modo offline activado.');
     };
 
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
@@ -78,6 +86,15 @@ export default function Layout({ children }) {
     await processSyncQueue();
     setIsSyncing(false);
     toast.success('Sincronización completada.');
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
   };
 
   const handleLogout = () => {
@@ -163,6 +180,16 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="p-4 border-t border-sidebar-border space-y-2">
+          {installPrompt && (
+            <button 
+              onClick={handleInstallClick}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-primary-foreground bg-sidebar-primary/20 hover:bg-sidebar-primary/30 transition-colors"
+            >
+              <Download size={20} className="text-sidebar-primary" />
+              Instalar Aplicación
+            </button>
+          )}
+
           <button 
             onClick={handleManualSync}
             disabled={isSyncing}

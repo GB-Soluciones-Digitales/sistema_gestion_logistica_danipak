@@ -7,6 +7,7 @@ import { comprobantesService } from '../../../api/comprobantesService';
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { generarPdfLocal } from '../../../utils/pdfGenerator';
 import Button from '../../../components/ui/Button';
 
 export default function ComprobanteView() {
@@ -61,19 +62,37 @@ export default function ComprobanteView() {
     setDownloading(true);
     toast.info("Generando PDF...");
     try {
-      const blob = await comprobantesService.descargarPdf(id);
+      const blob = generarPdfLocal(comprobante, nombres);
+      
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Comprobante_${comprobante.numero_comprobante}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Descarga completada");
+      const titulo = `Comprobante_${comprobante.numero_comprobante || 'Offline'}.pdf`;
+
+      const pdfWindow = window.open('');
+      if (pdfWindow) {
+        pdfWindow.document.write(`
+          <html>
+            <head>
+              <title>${titulo}</title>
+              <style>
+                body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+                embed { width: 100vw; height: 100vh; border: none; }
+              </style>
+            </head>
+            <body>
+              <embed src="${url}" type="application/pdf">
+            </body>
+          </html>
+        `);
+        pdfWindow.document.close();
+      } else {
+        toast.error("El navegador bloqueó la ventana emergente.");
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error(error);
-      toast.error("Error al descargar el PDF");
+      toast.error("Error al generar el PDF");
     } finally {
       setDownloading(false);
     }

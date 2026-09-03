@@ -1,13 +1,10 @@
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.schemas.comprobante import ComprobanteCreate, ComprobantePaginatedResponse, ComprobanteUpdate, ComprobanteResponse
 from app.crud import crud_comprobante
-from app.services.pdf_service import generar_comprobante_pdf
 
 router = APIRouter(prefix="/comprobantes", tags=["Comprobantes"])
 
@@ -42,19 +39,3 @@ def update_estado_comprobante(comprobante_id: int, comprobante_in: ComprobanteUp
         raise HTTPException(status_code=404, detail="Comprobante no encontrado.")
     
     return crud_comprobante.update_comprobante_estado(db=db, db_comprobante=db_comprobante, comprobante_in=comprobante_in, usuario_id=current_user.id)
-
-@router.get("/{comprobante_id}/pdf")
-def descargar_pdf_comprobante(comprobante_id: int, db: Session = Depends(get_db)):
-    db_comprobante = crud_comprobante.get_comprobante_by_id(db, comprobante_id)
-    if not db_comprobante:
-        raise HTTPException(status_code=404, detail="Comprobante no encontrado.")
-    
-    pdf_buffer = generar_comprobante_pdf(db_comprobante)
-    
-    nombre_archivo = f"{db_comprobante.tipo.replace(' ', '_')}_{db_comprobante.numero_comprobante}.pdf"
-    
-    return StreamingResponse(
-        pdf_buffer, 
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={nombre_archivo}"}
-    )

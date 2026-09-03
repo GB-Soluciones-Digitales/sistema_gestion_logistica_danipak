@@ -1,5 +1,5 @@
 import api from "./axios.js";
-import { db } from "../utils/database";
+import { db } from "../db/database"; 
 
 export const localidadService = {
     createLocalidad: async (data) => {

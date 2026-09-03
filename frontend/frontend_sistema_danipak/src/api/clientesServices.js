@@ -1,5 +1,5 @@
 import api from "./axios";
-import { db } from "../utils/database";
+import { db } from "../db/database"; 
 
 export const clientesServices = {
     createClientes: async (data) => {

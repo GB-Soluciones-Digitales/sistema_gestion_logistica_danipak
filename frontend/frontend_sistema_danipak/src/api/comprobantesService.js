@@ -15,6 +15,7 @@ export const comprobantesService = {
     getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
         if (!navigator.onLine) {
             let offlineItems = await db.cache_comprobantes.toArray();
+            offlineItems.reverse();
             
             if (search) {
                 const searchLower = search.toLowerCase();
@@ -58,6 +59,7 @@ export const comprobantesService = {
             const item = await db.cache_comprobantes.get(Number(id));
             if (item) return item;
         }
+        
         const response = await api.get(`/api/comprobantes/${id}`);
         return response.data;
     },

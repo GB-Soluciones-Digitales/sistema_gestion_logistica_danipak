@@ -1,3 +1,4 @@
+from fastapi.responses import JSONResponse
 import jwt
 from datetime import timedelta
 from fastapi import APIRouter, Depends, status, HTTPException, Request
@@ -5,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import get_password_hash, verify_password, create_access_token
+from app.core.security import create_refresh_token, get_password_hash, verify_password, create_access_token
 from app.schemas.auth import RecuperarPassword, ResetearPassword, Token
 from app.api.deps import get_db
 from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username, update_usuario
@@ -24,18 +25,48 @@ def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2Pass
 
     # Verificamos si el usuario existe y si la contraseña es correcta
     if not user or not verify_password(form_data.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario o contraseña incorrectos", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario o contraseña incorrectos")
 
     if not user.estado:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario inactivo", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario inactivo")
 
     # Creamos el token de acceso
     access_token = create_access_token(subject=user.id)
+    refresh_token = create_refresh_token(subject=user.id)
 
-    return {
-        "access_token": access_token, 
-        "token_type": "bearer"
-    }
+    response = JSONResponse(content={"access_token": access_token, "token_type": "bearer"})
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True, 
+        secure=False,
+        samesite="lax",
+        max_age=7 * 24 * 60 * 60
+    )
+    return response
+
+@router.post("/refresh")
+def refresh_token(request: Request, db: Session = Depends(get_db)):
+    # Leemos la cookie que el navegador envía automáticamente
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="No autorizado")
+    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id or payload.get("type") != "refresh":
+            raise HTTPException(status_code=401, detail="Token inválido")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Sesión expirada")
+
+    user = get_usuario_by_id(db, int(user_id))
+    if not user or not user.estado:
+        raise HTTPException(status_code=401, detail="Usuario inactivo")
+
+    # Emitimos un nuevo Access Token fresco
+    new_access_token = create_access_token(subject=user.id)
+    return {"access_token": new_access_token, "token_type": "bearer"}
 
 # Se va a implementar cuando se tenga el servicio de correo, mientras queda en pausa.
 @router.post("/olvide-password")

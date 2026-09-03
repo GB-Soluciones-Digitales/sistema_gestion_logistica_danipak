@@ -8,6 +8,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
+  withCredentials: true
 });
 
 // Intercepta la peticion y le inyecta el token antes de que la petición salga
@@ -40,6 +41,7 @@ api.interceptors.response.use(
   async (error) => {
     const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
     const isPostRequest = error.config?.method?.toLowerCase() === 'post';
+    const originalRequest = error.config;
 
     if (isNetworkError) {
       if (isPostRequest) {
@@ -59,13 +61,31 @@ api.interceptors.response.use(
 
     // Maneja los errores HTTP
     else if (error.response) {
-      if (error.response.status === 429) {
-        toast.error('Demasiados intentos. Por seguridad, espere un minuto antes de volver a intentar.');
-      }
-      else if (error.response.status === 401) {
-        toast.error('Su sesión ha expirado.');
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+      if (error.response.status === 401 && !originalRequest._retry) {
+        originalRequest._retry = true;
+
+        try {
+          // Pedimos un nuevo token. La cookie de refresh viaja sola gracias a withCredentials
+          const res = await axios.post(`${BASE_URL}/api/auth/refresh`, {}, { withCredentials: true });
+          
+          const newAccessToken = res.data.access_token;
+          localStorage.setItem('token', newAccessToken);
+
+          // Actualizamos el header de la peticion que habia fallado y la disparamos de nuevo
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
+          
+        } catch (refreshError) {
+          // Si el refresh expira (pasaron los 7 dias), lo sacamos al login
+          toast.error('Su sesión ha expirado completamente.');
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          return Promise.reject(refreshError);
+        }
+      } 
+      
+      else if (error.response.status === 429) {
+        toast.error('Demasiados intentos. Espere un minuto.');
       } else if (error.response.status >= 500) {
          toast.error('Error interno del servidor.');
       }

@@ -10,6 +10,7 @@ import { clientesServices } from '../../../api/clientesServices';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ClienteAutocomplete from '../../../components/ui/ClienteAutocomplete';
+import { generarPdfLocal } from '../../../utils/pdfGenerator';
 
 export default function ComprobanteForm() {
   const { id } = useParams(); 
@@ -98,10 +99,16 @@ export default function ComprobanteForm() {
   }, [tipoSeleccionado, isEditing, setValue]);
 
   const onSubmit = async (data) => {
+
+    if (!data.cliente_remitente_id) {
+      toast.error("El remitente debe ser un cliente registrado. Seleccionalo de la lista.");
+      return;
+    }
+
     try {
       const payload = {
         ...data,
-        cliente_remitente_id: data.cliente_remitente_id ? parseInt(data.cliente_remitente_id) : null,
+        cliente_remitente_id: parseInt(data.cliente_remitente_id),
         localidad_remitente_id: parseInt(data.localidad_remitente_id),
         localidad_destinatario_id: parseInt(data.localidad_destinatario_id),
         cantidad_bultos: parseInt(data.cantidad_bultos),
@@ -126,7 +133,7 @@ export default function ComprobanteForm() {
           
           if (idCreado) {
             toast.info("Abriendo comprobante para imprimir...");
-            const blob = await comprobantesService.descargarPdf(idCreado);
+            const blob = generarPdfLocal(nuevoComprobante);
             const url = window.URL.createObjectURL(blob);
 
             const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;
@@ -236,7 +243,7 @@ export default function ComprobanteForm() {
             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Datos del Remitente</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Cliente *</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Nombre Remitente *</label>
                 <Controller
                   name="nombre_remitente"
                   control={control}
@@ -244,22 +251,21 @@ export default function ComprobanteForm() {
                   render={({ field }) => (
                     <ClienteAutocomplete
                       clientes={clientes}
-                      value={field.value}
+                      value={field.value || ''}
                       onChange={(texto) => {
-                        field.onChange(texto); // Actualiza el texto
-                        setValue("cliente_remitente_id", null); // Como escribió a mano, borramos el ID
+                        field.onChange(texto);
+                        setValue("cliente_remitente_id", null, { shouldValidate: true });
                       }}
                       onSelect={(cliente) => {
-                        field.onChange(cliente.razon_social || cliente.nombre_fantasia);
-                        setValue("cliente_remitente_id", cliente.id); // Guardamos el ID internamente
-                        setValue("domicilio_remitente", cliente.direccion_fiscal || '');
-                        setValue("localidad_remitente_id", cliente.localidad_id || '');
+                        field.onChange(cliente.razon_social);
+                        setValue("cliente_remitente_id", cliente.id, { shouldValidate: true });
+                        setValue("domicilio_remitente", cliente.direccion || '');
                       }}
-                      placeholder="Buscar cliente o escribir..."
+                      placeholder="Buscar cliente registrado..."
                     />
                   )}
                 />
-                {errors.cliente_remitente_id && <span className="text-destructive text-xs mt-1">{errors.nombre_remitente.message}</span>}
+                {errors.nombre_remitente && <span className="text-destructive text-xs mt-1 block">{errors.nombre_remitente.message}</span>}
               </div>
               <Input 
                 label="Domicilio *"
@@ -298,9 +304,7 @@ export default function ComprobanteForm() {
                       onChange={field.onChange}
                       onSelect={(cliente) => {
                         field.onChange(cliente.razon_social || cliente.nombre_fantasia);
-                        // Autocompleta pero permite edición manual después
                         setValue("domicilio_destinatario", cliente.direccion || cliente.direccion_fiscal || '');
-                        setValue("localidad_destinatario_id", cliente.localidad_id || '');
                       }}
                       placeholder="Buscar en agenda o escribir..."
                     />

@@ -133,7 +133,18 @@ export default function ComprobanteForm() {
           
           if (idCreado) {
             toast.info("Abriendo comprobante para imprimir...");
-            const blob = generarPdfLocal(nuevoComprobante);
+
+            const locRemitenteObj = localidades.find(l => l.id === payload.localidad_remitente_id);
+            const locDestObj = localidades.find(l => l.id === payload.localidad_destinatario_id);
+
+            const datosParaPdf = {
+                ...nuevoComprobante,
+                cliente: { razon_social: data.nombre_remitente },
+                localidad_remitente_rel: { nombre: locRemitenteObj ? locRemitenteObj.nombre : '' },
+                localidad_destinatario_rel: { nombre: locDestObj ? locDestObj.nombre : '' }
+            };
+
+            const blob = generarPdfLocal(datosParaPdf);
             const url = window.URL.createObjectURL(blob);
 
             const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;

@@ -149,7 +149,7 @@ export default function Localidades() {
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
         {loading && localidades.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground">Buscando...</div>
+          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <DataTable columns={columnas} data={localidades} />
         )}

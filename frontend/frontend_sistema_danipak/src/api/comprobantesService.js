@@ -9,6 +9,17 @@ export const comprobantesService = {
 
     createComprobante: async (data) => {
         const response = await api.post('/api/comprobantes/', data);
+
+        if (response.data && response.data.offline) {
+            const nuevoComprobante = { 
+                ...data, 
+                id: response.data.id,
+                estado: 'Pendiente de sincronización'
+            };
+            await db.cache_comprobantes.put(nuevoComprobante);
+            return nuevoComprobante;
+        }
+
         return response.data;
     },
 
@@ -56,7 +67,8 @@ export const comprobantesService = {
 
     getById: async (id) => {
         if (!navigator.onLine) {
-            const item = await db.cache_comprobantes.get(Number(id));
+            const searchId = isNaN(id) ? id : Number(id);
+            const item = await db.cache_comprobantes.get(searchId);
             if (item) return item;
         }
         

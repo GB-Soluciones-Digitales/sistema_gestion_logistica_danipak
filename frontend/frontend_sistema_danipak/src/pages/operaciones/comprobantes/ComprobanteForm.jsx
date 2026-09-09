@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -9,6 +9,7 @@ import { localidadService } from '../../../api/localidadService';
 import { clientesServices } from '../../../api/clientesServices';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
+import ClienteAutocomplete from '../../../components/ui/ClienteAutocomplete';
 
 export default function ComprobanteForm() {
   const { id } = useParams(); 
@@ -100,7 +101,7 @@ export default function ComprobanteForm() {
     try {
       const payload = {
         ...data,
-        cliente_remitente_id: parseInt(data.cliente_remitente_id),
+        cliente_remitente_id: data.cliente_remitente_id ? parseInt(data.cliente_remitente_id) : null,
         localidad_remitente_id: parseInt(data.localidad_remitente_id),
         localidad_destinatario_id: parseInt(data.localidad_destinatario_id),
         cantidad_bultos: parseInt(data.cantidad_bultos),
@@ -236,16 +237,29 @@ export default function ComprobanteForm() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Cliente *</label>
-                <select 
-                  {...register("cliente_remitente_id", { required: "Seleccione un cliente" })}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">Seleccione un cliente...</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre_fantasia || c.razon_social || `Cliente ${c.id}`}</option>
-                  ))}
-                </select>
-                {errors.cliente_remitente_id && <span className="text-destructive text-xs mt-1">{errors.cliente_remitente_id.message}</span>}
+                <Controller
+                  name="nombre_remitente"
+                  control={control}
+                  rules={{ required: "El nombre es obligatorio" }}
+                  render={({ field }) => (
+                    <ClienteAutocomplete
+                      clientes={clientes}
+                      value={field.value}
+                      onChange={(texto) => {
+                        field.onChange(texto); // Actualiza el texto
+                        setValue("cliente_remitente_id", null); // Como escribió a mano, borramos el ID
+                      }}
+                      onSelect={(cliente) => {
+                        field.onChange(cliente.razon_social || cliente.nombre_fantasia);
+                        setValue("cliente_remitente_id", cliente.id); // Guardamos el ID internamente
+                        setValue("domicilio_remitente", cliente.direccion_fiscal || '');
+                        setValue("localidad_remitente_id", cliente.localidad_id || '');
+                      }}
+                      placeholder="Buscar cliente o escribir..."
+                    />
+                  )}
+                />
+                {errors.cliente_remitente_id && <span className="text-destructive text-xs mt-1">{errors.nombre_remitente.message}</span>}
               </div>
               <Input 
                 label="Domicilio *"
@@ -271,11 +285,29 @@ export default function ComprobanteForm() {
           <div className="bg-card p-6 rounded-lg border border-border shadow-sm border-t-4 border-t-accent-foreground">
             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Datos del Destinatario</h2>
             <div className="space-y-4">
-              <Input 
-                label="Nombre / Razón Social *"
-                error={errors.nombre_destinatario?.message}
-                {...register("nombre_destinatario", { required: "Campo obligatorio" })}
-              />
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Nombre / Razón Social *</label>
+                <Controller
+                  name="nombre_destinatario"
+                  control={control}
+                  rules={{ required: "Campo obligatorio" }}
+                  render={({ field }) => (
+                    <ClienteAutocomplete
+                      clientes={clientes}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onSelect={(cliente) => {
+                        field.onChange(cliente.razon_social || cliente.nombre_fantasia);
+                        // Autocompleta pero permite edición manual después
+                        setValue("domicilio_destinatario", cliente.direccion || cliente.direccion_fiscal || '');
+                        setValue("localidad_destinatario_id", cliente.localidad_id || '');
+                      }}
+                      placeholder="Buscar en agenda o escribir..."
+                    />
+                  )}
+                />
+                {errors.nombre_destinatario && <span className="text-destructive text-xs mt-1">{errors.nombre_destinatario.message}</span>}
+              </div>
               <Input 
                 label="Domicilio *"
                 error={errors.domicilio_destinatario?.message}

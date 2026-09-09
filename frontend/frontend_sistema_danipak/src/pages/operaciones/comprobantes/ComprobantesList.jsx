@@ -8,6 +8,7 @@ import ConfirmDialog from '../../../components/ConfirmDialog';
 import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
+import { generarPdfLocal } from '../../../utils/pdfGenerator';
 
 export default function ComprobantesList() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function ComprobantesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
+  const [downloading, setDownloading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filtros, setFiltros] = useState({
@@ -56,22 +58,43 @@ export default function ComprobantesList() {
     setCurrentPage(1);
   };
 
-  const handleDescargar = async (id, numero) => {
+  const handleDescargarPdf = async (fila) => {
+    setDownloading(true);
     toast.info("Generando PDF...");
     try {
-      const blob = await comprobantesService.descargarPdf(id);
+      const blob = generarPdfLocal(fila);
+      
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Comprobante_${numero}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Descarga completada");
+      const titulo = `Comprobante_${fila.numero_comprobante || 'Offline'}.pdf`;
+
+      const pdfWindow = window.open('');
+      if (pdfWindow) {
+        pdfWindow.document.write(`
+          <html>
+            <head>
+              <title>${titulo}</title>
+              <style>
+                body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+                embed { width: 100vw; height: 100vh; border: none; }
+              </style>
+            </head>
+            <body>
+              <embed src="${url}" type="application/pdf">
+            </body>
+          </html>
+        `);
+        pdfWindow.document.close();
+      } else {
+        toast.error("El navegador bloqueó la ventana emergente.");
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      toast.success("PDF generado exitosamente");
     } catch (error) {
+      console.error(error);
       toast.error("Error al generar el PDF");
-      console.error("Error al generar el PDF", error)
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -110,7 +133,7 @@ export default function ComprobantesList() {
           <Button variant="outline" onClick={() => navigate(`/comprobantes/${fila.id}`)} className="px-2 py-1 h-8" title="Ver">
             <Eye size={16} className="text-blue-600" />
           </Button>
-          <Button variant="outline" onClick={() => handleDescargar(fila.id, fila.numero_comprobante)} className="px-2 py-1 h-8" title="Descargar PDF">
+          <Button variant="outline" onClick={() => handleDescargarPdf(fila)} disabled={downloading} className="px-2 py-1 h-8" title="Descargar PDF">
             <Download size={16} className="text-green-600" />
           </Button>
           <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">

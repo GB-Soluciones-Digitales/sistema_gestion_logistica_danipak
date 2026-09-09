@@ -9,12 +9,24 @@ export const comprobantesService = {
 
     createComprobante: async (data) => {
         const response = await api.post('/api/comprobantes/', data);
+
+        if (response.data && response.data.offline) {
+            const nuevoComprobante = { 
+                ...data, 
+                id: response.data.id,
+                estado: 'Pendiente de sincronización'
+            };
+            await db.cache_comprobantes.put(nuevoComprobante);
+            return nuevoComprobante;
+        }
+
         return response.data;
     },
 
     getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
         if (!navigator.onLine) {
             let offlineItems = await db.cache_comprobantes.toArray();
+            offlineItems.reverse();
             
             if (search) {
                 const searchLower = search.toLowerCase();
@@ -55,9 +67,11 @@ export const comprobantesService = {
 
     getById: async (id) => {
         if (!navigator.onLine) {
-            const item = await db.cache_comprobantes.get(Number(id));
+            const searchId = isNaN(id) ? id : Number(id);
+            const item = await db.cache_comprobantes.get(searchId);
             if (item) return item;
         }
+        
         const response = await api.get(`/api/comprobantes/${id}`);
         return response.data;
     },

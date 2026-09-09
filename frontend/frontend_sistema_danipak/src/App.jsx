@@ -53,6 +53,7 @@ export default function App() {
           {/* Rutas Protegidas*/}
           {/* Todas las rutas dentro de este bloque van a exigir token */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<ComprobantesList />} />
             <Route path="/comprobantes" element={<ComprobantesList />} />
             <Route path="/comprobantes/nuevo" element={<ComprobanteForm />} />
             <Route path="/comprobantes/editar/:id" element={<ComprobanteForm />} />

@@ -8,7 +8,7 @@ from app.models.MovimientoCC import MovimientoCC
 from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
-from backend.app.models.Cliente import Cliente
+from app.models.Cliente import Cliente
 
 def get_movimiento_by_id(db: Session, movimiento_id: int) -> MovimientoCC | None:
     return db.query(MovimientoCC).filter(MovimientoCC.id == movimiento_id).first()

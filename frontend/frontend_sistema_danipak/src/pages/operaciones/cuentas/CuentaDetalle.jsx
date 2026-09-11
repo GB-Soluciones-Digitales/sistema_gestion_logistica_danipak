@@ -12,7 +12,7 @@ import Button from '../../../components/ui/Button';
 import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 
-import { generarReciboPdf } from '../../../utils/pdfRecibos';
+import { generarReciboPdf } from '../../../utils/pdfReciboPago';
 
 export default function CuentaDetalle() {
   const { id } = useParams();

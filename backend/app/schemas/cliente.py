@@ -8,6 +8,7 @@ class ClienteBase(BaseModel):
     telefono: Optional[str] = None
     email: Optional[str] = None
     estado: bool = True
+    tiene_cuenta_corriente: bool = False
 
 class ClienteCreate(ClienteBase):
     pass

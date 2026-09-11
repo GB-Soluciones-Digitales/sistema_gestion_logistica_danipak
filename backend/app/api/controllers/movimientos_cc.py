@@ -25,25 +25,13 @@ def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
     return movimiento
 
+@router.get("/resumen-general")
+def get_resumen_general(db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_general_cuentas(db)
+
 @router.get("/cliente/{cliente_id}/resumen")
 def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
-    movimientos = db.query(MovimientoCC).filter(
-        MovimientoCC.cliente_id == cliente_id,
-        MovimientoCC.anulado == False
-    ).order_by(MovimientoCC.fecha_movimiento.desc()).all()
-    
-    saldo_total = 0
-    for mov in movimientos:
-        if mov.tipo_movimiento == "Factura":
-            saldo_total += float(mov.importe)
-        elif mov.tipo_movimiento == "Pago":
-            saldo_total -= float(mov.importe)
-            
-    return {
-        "cliente_id": cliente_id,
-        "saldo_total": saldo_total,
-        "cantidad_movimientos": len(movimientos)
-    }
+    return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
 
 @router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
 def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):

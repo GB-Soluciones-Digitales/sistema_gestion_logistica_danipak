@@ -12,6 +12,8 @@ import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
 import ComprobanteView from './pages/operaciones/comprobantes/ComprobanteView';
 import ClientesList from './pages/operaciones/clientes/ClientesList';
 import ClienteForm from './pages/operaciones/clientes/ClienteForm';
+import CuentasCorrientes from './pages/operaciones/cuentas/CuentasCorrientes';
+import CuentaDetalle from './pages/operaciones/cuentas/CuentaDetalle';
 import Localidades from "./pages/operaciones/Localidades";
 
 export default function App() {
@@ -61,6 +63,8 @@ export default function App() {
             <Route path="/clientes" element={<ClientesList />} />
             <Route path="/clientes/nuevo" element={<ClienteForm />} />
             <Route path="/clientes/editar/:id" element={<ClienteForm />} />
+            <Route path="/cuentas-corrientes" element={<CuentasCorrientes />} />
+            <Route path="/cuentas-corrientes/:id" element={<CuentaDetalle />} />
             <Route path="/localidades" element={<Localidades />} />
           </Route>
 

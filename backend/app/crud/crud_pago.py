@@ -7,7 +7,7 @@ from app.models.Pago import Pago
 from app.schemas.pago import PagoCreate, PagoUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
-from backend.app.models.MovimientoCC import MovimientoCC
+from app.models.MovimientoCC import MovimientoCC
 
 # Lauti te lo explico aca en pagos pero aplica para todos los cruds.
 def get_pago_by_id(db: Session, pago_id: int) -> Pago | None:

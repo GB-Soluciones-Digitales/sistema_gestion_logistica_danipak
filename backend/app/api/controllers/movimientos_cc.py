@@ -14,6 +14,14 @@ router = APIRouter(prefix="/movimientos", tags=["Movimientos CC"])
 def create_movimiento(movimiento_in: MovimientoCCCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     return crud_movimientoCC.create_movimiento_cc(db=db, movimiento=movimiento_in, usuario_id=current_user.id)
 
+@router.get("/resumen-general")
+def get_resumen_general(db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_general_cuentas(db)
+
+@router.get("/cliente/{cliente_id}/resumen")
+def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
+
 @router.get("/cliente/{cliente_id}", response_model=MovimientoCCPaginatedResponse)
 def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, anulado: Optional[bool] = None, db: Session = Depends(get_db)):
     return crud_movimientoCC.get_movimientos(db=db, cliente_id=cliente_id, skip=skip, limit=limit, anulado=anulado)
@@ -24,14 +32,6 @@ def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
     if not movimiento:
         raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
     return movimiento
-
-@router.get("/resumen-general")
-def get_resumen_general(db: Session = Depends(get_db)):
-    return crud_movimientoCC.get_resumen_general_cuentas(db)
-
-@router.get("/cliente/{cliente_id}/resumen")
-def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
-    return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
 
 @router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
 def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):

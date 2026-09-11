@@ -21,7 +21,8 @@ export default function ClienteForm() {
       direccion: '',
       telefono: '',
       email: '',
-      estado: true
+      estado: true,
+      tiene_cuenta_corriente: false
     }
   });
 
@@ -106,14 +107,22 @@ export default function ClienteForm() {
 
           {isEditing && (
             <div className="pt-4 border-t border-border mt-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input 
-                  type="checkbox"
-                  {...register("estado")}
-                  className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
-                />
-                <span className="text-sm font-medium text-foreground">Cliente Activo</span>
-              </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    {...register("estado")}
+                    className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">Cliente Activo</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer mt-2"> 
+                  <input 
+                    type="checkbox"
+                    {...register("tiene_cuenta_corriente")}
+                    className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
+                  />
+                  <span className="text-sm font-medium text-foreground">Tiene Cuenta Corriente</span>
+                </label>
             </div>
           )}
         </div>

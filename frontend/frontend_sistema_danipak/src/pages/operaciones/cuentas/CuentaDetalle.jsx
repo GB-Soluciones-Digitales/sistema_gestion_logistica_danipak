@@ -175,18 +175,11 @@ export default function CuentaDetalle() {
           </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button 
-            onClick={() => setModalFacturaOpen(true)} 
-            variant="outline"
-            className="w-full sm:w-auto border-red-200 text-red-700 hover:bg-red-50"
-          >
-            <FileText size={18} className="mr-2" /> Nueva Factura
+          <Button onClick={() => setModalFacturaOpen(true)} variant="outline" className="w-full sm:w-auto border-red-200 text-red-700 hover:bg-red-50">
+            <FileText size={20} className="mr-2" /> Nueva Factura
           </Button>
-          <Button 
-            onClick={() => setModalPagoOpen(true)} 
-            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
-          >
-            <DollarSign size={18} className="mr-2" /> Registrar Pago
+          <Button onClick={() => setModalPagoOpen(true)} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white">
+            <DollarSign size={20} className="mr-2" /> Registrar Pago
           </Button>
         </div>
       </div>
@@ -208,6 +201,7 @@ export default function CuentaDetalle() {
 
       {/* Tabla Historial */}
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+        
         {loading && movimientos.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">Cargando historial...</div>
         ) : (

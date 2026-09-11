@@ -18,8 +18,8 @@ def create_factura(factura_in: FacturaCreate, db: Session = Depends(get_db), cur
     return crud_factura.create_factura(db=db, factura=factura_in, usuario_id=current_user.id)
 
 @router.get("/", response_model=FacturaPaginatedResponse)
-def get_facturas(skip: int = 0, limit: int = 100, search: Optional[str] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
-    return crud_factura.get_facturas(db=db, skip=skip, limit=limit, search=search, estado=estado)
+def get_facturas(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud_factura.get_facturas(db=db, skip=skip, limit=limit, search=search)
 
 @router.get("/{factura_id}", response_model=FacturaResponse)
 def get_factura(factura_id: int, db: Session = Depends(get_db)):

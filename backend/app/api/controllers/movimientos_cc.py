@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
+from app.models.MovimientoCC import MovimientoCC
 from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCPaginatedResponse, MovimientoCCResponse
 from app.crud import crud_movimientoCC
 
@@ -23,6 +24,14 @@ def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
     if not movimiento:
         raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
     return movimiento
+
+@router.get("/resumen-general")
+def get_resumen_general(db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_general_cuentas(db)
+
+@router.get("/cliente/{cliente_id}/resumen")
+def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
 
 @router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
 def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):

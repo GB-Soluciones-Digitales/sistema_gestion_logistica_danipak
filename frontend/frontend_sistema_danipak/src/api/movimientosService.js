@@ -1,7 +1,6 @@
 import api from "./axios.js";
 
 export const movimientosService = {
-
     createMovimiento: async (data) => {
         const response = await api.post('/movimientos/', data);
         return response.data;
@@ -15,8 +14,18 @@ export const movimientosService = {
         return response.data;
     },
 
+    getResumenGeneral: async () => {
+        const response = await api.get('/movimientos/resumen-general');
+        return response.data;
+    },
+    
+    getResumen: async (clienteId) => {
+        const response = await api.get(`/movimientos/cliente/${clienteId}/resumen`);
+        return response.data;
+    },
+
     getById: async (id) => {
-        const response = await api.get(`/moviminetos/${id}`);
+        const response = await api.get(`/movimientos/${id}`);
         return response.data;
     },
 

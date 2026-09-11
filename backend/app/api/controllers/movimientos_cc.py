@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
+from app.models.MovimientoCC import MovimientoCC
 from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCPaginatedResponse, MovimientoCCResponse
 from app.crud import crud_movimientoCC
 
@@ -23,6 +24,26 @@ def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):
     if not movimiento:
         raise HTTPException(status_code=404, detail="Movimiento no encontrado.")
     return movimiento
+
+@router.get("/cliente/{cliente_id}/resumen")
+def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
+    movimientos = db.query(MovimientoCC).filter(
+        MovimientoCC.cliente_id == cliente_id,
+        MovimientoCC.anulado == False
+    ).order_by(MovimientoCC.fecha_movimiento.desc()).all()
+    
+    saldo_total = 0
+    for mov in movimientos:
+        if mov.tipo_movimiento == "Factura":
+            saldo_total += float(mov.importe)
+        elif mov.tipo_movimiento == "Pago":
+            saldo_total -= float(mov.importe)
+            
+    return {
+        "cliente_id": cliente_id,
+        "saldo_total": saldo_total,
+        "cantidad_movimientos": len(movimientos)
+    }
 
 @router.put("/{movimiento_id}/anular", response_model=MovimientoCCResponse)
 def anular_movimiento(movimiento_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):

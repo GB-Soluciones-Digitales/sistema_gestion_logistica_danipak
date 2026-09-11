@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_db
+from app.api.deps import get_current_user, get_db
 from app.crud import crud_pago
 from app.schemas.pago import PagoPaginatedResponse, PagoResponse, PagoCreate, PagoUpdate
 

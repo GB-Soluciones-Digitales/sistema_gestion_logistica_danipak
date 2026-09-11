@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -15,11 +15,8 @@ def get_factura_by_numero(db: Session, numero_factura: str) -> Factura | None:
 
 def get_facturas(db: Session, skip: int = 0, limit: int = 100, search: str = None, estado: str = None) -> dict:
     query = db.query(Factura)
-    
     if search:
         query = query.filter(Factura.numero_factura.ilike(f"%{search}%"))
-    if estado:
-        query = query.filter(Factura.estado == estado)
         
     total = query.count()
     items = query.order_by(Factura.fecha.desc()).offset(skip).limit(limit).all()
@@ -43,6 +40,18 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
         )
         create_auditoria_log(db, log_data)
 
+        db_movimiento = MovimientoCC(
+            cliente_id=db_factura.cliente_id,
+            fecha_movimiento=db_factura.fecha,
+            tipo_movimiento="Factura",
+            referencia_id=db_factura.id,
+            importe=db_factura.importe_total,
+            anulado=False,
+            usuario_creador_id=usuario_id
+        )
+        db.add(db_movimiento)
+        db.flush()
+
         db.commit()
         db.refresh(db_factura)
         return db_factura
@@ -50,7 +59,7 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
     except Exception as e:
         db.rollback()
         print(f"Error BD (create_factura): {str(e)}")
-        raise HTTPException(status_code=500, detail="Error interno al crear la factura.")
+        raise HTTPException(status_code=500, detail="Error interno al crear la factura y su movimiento de Cuenta Corriente.")
 
 def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate, usuario_id: int) -> Factura:
     update_data = factura_in.model_dump(exclude_unset=True)

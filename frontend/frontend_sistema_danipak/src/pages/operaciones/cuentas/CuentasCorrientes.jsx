@@ -43,7 +43,7 @@ export default function CuentasCorrientes() {
   const columnas = [
     { key: 'razon_social', label: 'Cliente' },
     { key: 'cuit_dni', label: 'CUIT/DNI' },
-    { key: 'telefono', label: 'Teléfono' },
+    { key: 'telefono', label: 'Teléfono', render: (fila) => fila.telefono || '-' },
     { key: 'saldo_total', label: 'Estado de Cuenta',
       render: (fila) => (
         <span className={`font-bold ${fila.saldo_total > 0 ? 'text-red-600' : fila.saldo_total < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
@@ -99,21 +99,11 @@ export default function CuentasCorrientes() {
               Mostrando {cuentasFiltradas.length} de {totalRegistros} Cuentas Corrientes
             </span>
             <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setPage(p => p - 1)} disabled={page === 1 || loading} className="px-2 py-1 h-8">
                 <ChevronLeft size={18} />
               </Button>
-              <span className="text-sm font-medium">Página {page} de {totalPages}</span>
-              <Button 
-                variant="outline"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-2 py-1 h-8"
-              >
+              <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
+              <Button variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages } className="px-2 py-1 h-8">
                 <ChevronRight size={18} />
               </Button>
             </div>

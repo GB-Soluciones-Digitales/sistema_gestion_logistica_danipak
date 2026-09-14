@@ -116,9 +116,10 @@ export default function ComprobantesList() {
   };
 
   const columnas = [
-    { key: 'fecha_emision', label: 'Fecha', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo_comprobante || '-' },
     { key: 'numero_comprobante', label: 'Número', render: (fila) => <span className="font-medium">{fila.numero_comprobante}</span> },
-    { key: 'nombre_destinatario', label: 'Destinatario' },
+    { key: 'nombre_destinatario', label: 'Destinatario', render: (fila) => fila.nombre_destinatario || '-' },
     { key: 'importe_flete_cobro', label: 'Flete Cobrar', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
     { key: 'estado', label: 'Estado',
       render: (fila) => (
@@ -232,23 +233,13 @@ export default function ComprobantesList() {
         {!loading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando página {currentPage} de {totalPages}
+              Mostrando página {comprobantes.length} de {totalRecords} comprobantes
             </span>
             <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || loading} className="px-2 py-1 h-8">
                 <ChevronLeft size={18} />
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 h-8">
                 <ChevronRight size={18} />
               </Button>
             </div>

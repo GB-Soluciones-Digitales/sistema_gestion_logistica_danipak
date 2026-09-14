@@ -189,7 +189,6 @@ export default function CuentaDetalle() {
           ${resumen.saldo_total > 0 ? 'bg-red-50 border-red-100' : 'bg-green-50 border-green-100'}`}>
         <div>
           <h2 className="text-lg font-medium text-foreground">Estado Actual</h2>
-          <p className="text-sm text-muted-foreground">Calculado al instante</p>
         </div>
         <div className="text-right mt-2 md:mt-0">
           <h3 className={`text-4xl font-bold tracking-tight ${resumen.saldo_total > 0 ? 'text-red-600' : 'text-green-600'}`}>

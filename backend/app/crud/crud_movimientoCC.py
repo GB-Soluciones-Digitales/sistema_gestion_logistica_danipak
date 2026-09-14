@@ -88,6 +88,7 @@ def get_resumen_cuenta_cliente(db: Session, cliente_id: int) -> dict:
 
 def create_movimiento_cc(db: Session, movimiento: MovimientoCCCreate, usuario_id: int) -> MovimientoCC:
     movimiento_data = movimiento.model_dump()
+    movimiento_data_json = movimiento.model_dump(exclude_unset=True, mode='json')
     
     try:
         db_movimiento = MovimientoCC(**movimiento_data, usuario_creador_id=usuario_id)
@@ -99,7 +100,7 @@ def create_movimiento_cc(db: Session, movimiento: MovimientoCCCreate, usuario_id
             accion="INSERT",
             tabla_afectada="movimientos_cc",
             registro_id=db_movimiento.id,
-            detalles_cambio=movimiento_data,
+            detalles_cambio=movimiento_data_json,
             fecha=datetime.now()
         )
         create_auditoria_log(db, log_data)
@@ -140,6 +141,7 @@ def anular_movimiento_cc(db: Session, db_movimiento: MovimientoCC, usuario_id: i
 
 def update_movimiento_cc(db: Session, db_movimiento: MovimientoCC, movimiento_in: MovimientoCCUpdate, usuario_id: int) -> MovimientoCC:
     movimiento_data = movimiento_in.model_dump(exclude_unset=True)
+    movimiento_data_json = movimiento_in.model_dump(exclude_unset=True, mode='json')
     
     try:
         for key, value in movimiento_data.items():
@@ -153,7 +155,7 @@ def update_movimiento_cc(db: Session, db_movimiento: MovimientoCC, movimiento_in
             accion="UPDATE",
             tabla_afectada="movimientos_cc",
             registro_id=db_movimiento.id,
-            detalles_cambio=movimiento_data,
+            detalles_cambio=movimiento_data_json,
             fecha=datetime.now()
         )
         create_auditoria_log(db, log_data)

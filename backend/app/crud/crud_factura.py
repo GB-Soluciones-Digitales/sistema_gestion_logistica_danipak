@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.models.Factura import Factura
+from app.models.MovimientoCC import MovimientoCC
 from app.schemas.factura import FacturaCreate, FacturaUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
@@ -24,6 +25,7 @@ def get_facturas(db: Session, skip: int = 0, limit: int = 100, search: str = Non
 
 def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Factura:
     factura_data = factura.model_dump()
+    factura_data_json = factura.model_dump(mode='json')
     
     try:
         db_factura = Factura(**factura_data, usuario_creador_id=usuario_id)
@@ -35,7 +37,7 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
             accion="INSERT",
             tabla_afectada="facturas",
             registro_id=db_factura.id,
-            detalles_cambio=factura_data,
+            detalles_cambio=factura_data_json,
             fecha=datetime.now()
         )
         create_auditoria_log(db, log_data)
@@ -63,6 +65,7 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
 
 def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate, usuario_id: int) -> Factura:
     update_data = factura_in.model_dump(exclude_unset=True)
+    update_data_json = factura_in.model_dump(exclude_unset=True, mode='json')
     
     try:
         for key, value in update_data.items():
@@ -76,7 +79,7 @@ def update_factura(db: Session, db_factura: Factura, factura_in: FacturaUpdate, 
             accion="UPDATE",
             tabla_afectada="facturas",
             registro_id=db_factura.id,
-            detalles_cambio=update_data,
+            detalles_cambio=update_data_json,
             fecha=datetime.now()
         )
         create_auditoria_log(db, log_data)

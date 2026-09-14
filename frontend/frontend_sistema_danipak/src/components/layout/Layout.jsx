@@ -1,13 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { useAuth } from '../../context/AuthContext';
+import { processSyncQueue } from '../../utils/syncManager';
 import LogoExtendido from '../../assets/logo-extendido.svg';
 import Isotipo from '../../assets/isotipo.svg';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -37,6 +43,60 @@ export default function Layout({ children }) {
     }
   ];
 
+  // Sincronización automática al recuperar conexión
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      toast.info('Conexión restablecida. Sincronizando datos pendientes...');
+      setIsSyncing(true);
+      await processSyncQueue();
+      setIsSyncing(false);
+      toast.success('Sincronización completada.');
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      toast.warning('Sin conexión a internet. Modo offline activado.');
+    };
+
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // Sincronización manual
+  const handleManualSync = async () => {
+    if (!navigator.onLine) {
+      toast.error('No hay conexión a internet en este momento.');
+      return;
+    }
+    setIsSyncing(true);
+    toast.info('Sincronizando datos pendientes...');
+    await processSyncQueue();
+    setIsSyncing(false);
+    toast.success('Sincronización completada.');
+  };
+
+  const handleInstallClick = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -47,7 +107,7 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row font-sans">
+    <div className="h-screen overflow-hidden bg-background flex flex-col md:flex-row font-sans">
       
       <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground border-b border-sidebar-border z-20">
         <div className="font-display font-bold text-xl tracking-tight text-sidebar-primary-foreground">
@@ -119,7 +179,26 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          {installPrompt && (
+            <button 
+              onClick={handleInstallClick}
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-primary-foreground bg-sidebar-primary/20 hover:bg-sidebar-primary/30 transition-colors"
+            >
+              <Download size={20} className="text-sidebar-primary" />
+              Instalar Aplicación
+            </button>
+          )}
+
+          <button 
+            onClick={handleManualSync}
+            disabled={isSyncing}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={20} className={isSyncing ? "animate-spin text-primary" : ""} />
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+          </button>
+
           <button 
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-destructive hover:bg-sidebar-accent hover:text-destructive transition-colors"
@@ -137,6 +216,25 @@ export default function Layout({ children }) {
         />
       )}
 
+      <div className="fixed bottom-4 right-4 z-40 md:bottom-6 md:right-8">
+        {!isOnline ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-destructive/20 bg-destructive/10 text-destructive shadow-sm backdrop-blur-sm">
+            <WifiOff size={14} />
+            <span className="text-xs font-bold tracking-wide">Modo Offline</span>
+          </div>
+        ) : isSyncing ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 shadow-sm backdrop-blur-sm">
+            <RefreshCw size={14} className="animate-spin" />
+            <span className="text-xs font-bold tracking-wide">Sincronizando...</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 shadow-sm backdrop-blur-sm transition-opacity duration-1000 opacity-70 hover:opacity-100">
+            <Wifi size={14} />
+            <span className="text-xs font-bold tracking-wide">Conectado - Sincronizado</span>
+          </div>
+        )}
+      </div>
+      
       <main className="flex-1 overflow-y-auto p-4 md:p-8 bg-background relative">
         {children}
       </main>

@@ -1,8 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
-from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCResponse
+from app.models.MovimientoCC import MovimientoCC
+from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCPaginatedResponse, MovimientoCCResponse
 from app.crud import crud_movimientoCC
 
 router = APIRouter(prefix="/movimientos", tags=["Movimientos CC"])
@@ -11,9 +14,17 @@ router = APIRouter(prefix="/movimientos", tags=["Movimientos CC"])
 def create_movimiento(movimiento_in: MovimientoCCCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     return crud_movimientoCC.create_movimiento_cc(db=db, movimiento=movimiento_in, usuario_id=current_user.id)
 
-@router.get("/cliente/{cliente_id}", response_model=list[MovimientoCCResponse])
-def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud_movimientoCC.get_movimientos_by_cliente(db=db, cliente_id=cliente_id, skip=skip, limit=limit)
+@router.get("/resumen-general")
+def get_resumen_general(db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_general_cuentas(db)
+
+@router.get("/cliente/{cliente_id}/resumen")
+def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
+
+@router.get("/cliente/{cliente_id}", response_model=MovimientoCCPaginatedResponse)
+def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, anulado: Optional[bool] = None, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_movimientos(db=db, cliente_id=cliente_id, skip=skip, limit=limit, anulado=anulado)
 
 @router.get("/{movimiento_id}", response_model=MovimientoCCResponse)
 def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):

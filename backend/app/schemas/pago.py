@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
@@ -23,3 +23,7 @@ class PagoResponse(PagoBase):
     id: int
     usuario_creador_id: int
     model_config = ConfigDict(from_attributes=True)
+
+class PagoPaginatedResponse(BaseModel):
+    total: int
+    items: List[PagoResponse]

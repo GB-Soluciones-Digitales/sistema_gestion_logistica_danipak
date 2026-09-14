@@ -12,6 +12,7 @@ class Cliente(Base):
     telefono = Column(String, nullable=True)
     email = Column(String, nullable=True)
     estado = Column(Boolean, default=True, nullable=False)
+    tiene_cuenta_corriente = Column(Boolean, default=False, nullable=False)
 
     comprobantes = relationship("Comprobante", back_populates="cliente")
     facturas = relationship("Factura", back_populates="cliente")

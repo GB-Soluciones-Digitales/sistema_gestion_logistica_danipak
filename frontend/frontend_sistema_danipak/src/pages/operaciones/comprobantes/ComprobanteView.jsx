@@ -2,8 +2,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { comprobantesService } from '../../../api/comprobantesService';
+import { clientesServices } from '../../../api/clientesServices';
+import { localidadService } from '../../../api/localidadService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
+import { generarPdfLocal } from '../../../utils/pdfGenerator';
+import Button from '../../../components/ui/Button';
 
 export default function ComprobanteView() {
   const { id } = useParams();
@@ -12,12 +17,36 @@ export default function ComprobanteView() {
   const [comprobante, setComprobante] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const [nombres, setNombres] = useState({ cliente: '', locRemitente: '', locDestinatario: '' });
 
   useEffect(() => {
     const fetchComprobante = async () => {
       try {
         const data = await comprobantesService.getById(id);
         setComprobante(data);
+
+        try {
+          const [clienteData, locRemData, locDestData] = await Promise.all([
+            clientesServices.getById(data.cliente_remitente_id),
+            localidadService.getById(data.localidad_remitente_id),
+            localidadService.getById(data.localidad_destinatario_id)
+          ]);
+
+          setNombres({
+            cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
+            locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
+            locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
+          });
+        } catch (err) {
+          console.error("Error al cargar datos vinculados", err);
+          // Si algo falla, mostramos los IDs como respaldo
+          setNombres({
+            cliente: `ID: ${data.cliente_remitente_id}`,
+            locRemitente: `ID: ${data.localidad_remitente_id}`,
+            locDestinatario: `ID: ${data.localidad_destinatario_id}`
+          });
+        }
+
       } catch (error) {
         console.error(error);
         toast.error("Error al cargar el comprobante.");
@@ -33,19 +62,37 @@ export default function ComprobanteView() {
     setDownloading(true);
     toast.info("Generando PDF...");
     try {
-      const blob = await comprobantesService.descargarPdf(id);
+      const blob = generarPdfLocal(comprobante, nombres);
+      
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Comprobante_${comprobante.numero_comprobante}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      toast.success("Descarga completada");
+      const titulo = `Comprobante_${comprobante.numero_comprobante || 'Offline'}.pdf`;
+
+      const pdfWindow = window.open('');
+      if (pdfWindow) {
+        pdfWindow.document.write(`
+          <html>
+            <head>
+              <title>${titulo}</title>
+              <style>
+                body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+                embed { width: 100vw; height: 100vh; border: none; }
+              </style>
+            </head>
+            <body>
+              <embed src="${url}" type="application/pdf">
+            </body>
+          </html>
+        `);
+        pdfWindow.document.close();
+      } else {
+        toast.error("El navegador bloqueó la ventana emergente.");
+      }
+
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error(error);
-      toast.error("Error al descargar el PDF");
+      toast.error("Error al generar el PDF");
     } finally {
       setDownloading(false);
     }
@@ -99,14 +146,14 @@ export default function ComprobanteView() {
           </div>
         </div>
 
-        <button 
+        <Button 
           onClick={handleDescargarPdf}
           disabled={downloading}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:opacity-90 transition-opacity font-medium disabled:opacity-50"
+          className="w-full sm:w-auto flex items-center justify-center gap-2"
         >
           <Download size={18} />
           {downloading ? 'Descargando...' : 'Descargar PDF'}
-        </button>
+        </Button>
       </div>
 
       {/* CUERPO DEL COMPROBANTE */}
@@ -134,16 +181,16 @@ export default function ComprobanteView() {
               Datos del Remitente
             </h3>
             <div>
-              <p className="text-xs text-muted-foreground">Cliente (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.cliente_remitente_id}</p>
+              <p className="text-xs text-muted-foreground">Cliente</p>
+              <p className="font-medium text-foreground">{nombres.cliente}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Domicilio</p>
               <p className="font-medium text-foreground">{comprobante.domicilio_remitente}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Localidad (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.localidad_remitente_id}</p>
+              <p className="text-xs text-muted-foreground">Localidad</p>
+              <p className="font-medium text-foreground">{nombres.locRemitente}</p>
             </div>
           </div>
 
@@ -162,8 +209,8 @@ export default function ComprobanteView() {
               <p className="font-medium text-foreground">{comprobante.domicilio_destinatario}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Localidad (ID)</p>
-              <p className="font-medium text-foreground">{comprobante.localidad_destinatario_id}</p>
+              <p className="text-xs text-muted-foreground">Localidad</p>
+              <p className="font-medium text-foreground">{nombres.locDestinatario}</p>
             </div>
           </div>
         </div>

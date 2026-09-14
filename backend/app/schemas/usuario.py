@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import List, Optional
 
 class UsuarioBase(BaseModel):
     nombre_completo: str
@@ -20,3 +20,7 @@ class UsuarioUpdate(BaseModel):
 class UsuarioResponse(UsuarioBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class UsuarioPaginatedResponse(BaseModel):
+    total: int
+    items: List[UsuarioResponse]

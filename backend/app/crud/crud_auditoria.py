@@ -3,8 +3,19 @@ from sqlalchemy.orm import Session
 from app.models.Auditoria import Auditoria
 from app.schemas.auditoria import AuditoriaCreate
 
-def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100) -> list[Auditoria]:
-    return db.query(Auditoria).order_by(Auditoria.fecha.desc()).offset(skip).limit(limit).all()
+def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afectada: str = None, accion: str = None, usuario_id: int = None) -> dict:
+    query = db.query(Auditoria)
+    
+    if tabla_afectada:
+        query = query.filter(Auditoria.tabla_afectada == tabla_afectada)
+    if accion:
+        query = query.filter(Auditoria.accion == accion)
+    if usuario_id:
+        query = query.filter(Auditoria.usuario_id == usuario_id)
+        
+    total = query.count()
+    items = query.order_by(Auditoria.fecha.desc()).offset(skip).limit(limit).all()
+    return {"total": total, "items": items}
 
 def get_auditoria_by_registro(db: Session, tabla: str, registro_id: int) -> list[Auditoria]:
     return db.query(Auditoria)\
@@ -16,6 +27,5 @@ def create_auditoria_log(db: Session, auditoria: AuditoriaCreate) -> Auditoria:
     db_auditoria = Auditoria(**auditoria_data)
     
     db.add(db_auditoria)
-    db.commit()
-    db.refresh(db_auditoria)
+    db.flush()
     return db_auditoria

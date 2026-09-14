@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { comprobantesService } from '../../../api/comprobantesService';
 import { localidadService } from '../../../api/localidadService';
 import { clientesServices } from '../../../api/clientesServices';
+import Button from '../../../components/ui/Button';
+import Input from '../../../components/ui/Input';
+import ClienteAutocomplete from '../../../components/ui/ClienteAutocomplete';
+import { generarPdfLocal } from '../../../utils/pdfGenerator';
 
 export default function ComprobanteForm() {
   const { id } = useParams(); 
@@ -16,13 +20,20 @@ export default function ComprobanteForm() {
   const [localidades, setLocalidades] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
+  const [cargandoNumero, setCargandoNumero] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       estado: 'Emitido',
+      tipo: '',
       cantidad_bultos: 1,
       fecha_emision: new Date().toISOString().split('T')[0] 
     }
+  });
+
+  const tipoSeleccionado = useWatch({
+    control,
+    name: "tipo"
   });
 
   useEffect(() => {
@@ -46,8 +57,8 @@ export default function ComprobanteForm() {
           });
         }
       } catch (error) {
-        toast.error("Error al cargar los datos del formulario.");
-        console.error(error);
+        toast.error("Error al cargar los datos iniciales.");
+        console.log("Error al cargar los datos", error)
       } finally {
         setLoadingData(false);
       }
@@ -56,7 +67,44 @@ export default function ComprobanteForm() {
     fetchData();
   }, [id, isEditing, reset]);
 
+  useEffect(() => {
+    if (isEditing) return;
+
+    const calcularProximoNumero = async () => {
+      if (tipoSeleccionado === "Comprobante de Envío") {
+        setCargandoNumero(true);
+        try {
+          const res = await comprobantesService.getUltimoNumero(); 
+          
+          const partes = res.ultimo_numero.split('-');
+          if (partes.length === 2) {
+            const siguienteNumero = parseInt(partes[1], 10) + 1;
+            const nuevoCorrelativo = String(siguienteNumero).padStart(8, '0');
+            const numeroFinal = `${partes[0]}-${nuevoCorrelativo}`;
+            
+            setValue("numero_comprobante", numeroFinal);
+          }
+        } catch (error) {
+          toast.error("Error al obtener el número correlativo");
+          console.error("Error al obtener el número correlativo", error)
+        } finally {
+          setCargandoNumero(false);
+        }
+      } else if (tipoSeleccionado === "Remito") {
+        setValue("numero_comprobante", "");
+      }
+    };
+
+    calcularProximoNumero();
+  }, [tipoSeleccionado, isEditing, setValue]);
+
   const onSubmit = async (data) => {
+
+    if (!data.cliente_remitente_id) {
+      toast.error("El remitente debe ser un cliente registrado. Seleccionalo de la lista.");
+      return;
+    }
+
     try {
       const payload = {
         ...data,
@@ -70,10 +118,66 @@ export default function ComprobanteForm() {
       };
 
       if (isEditing) {
-        toast.info("Función de edición completa requiere ajuste en el backend");
+        await comprobantesService.updateEstado(id, payload);
+        toast.success("Comprobante actualizado exitosamente");
+        navigate('/comprobantes');
       } else {
-        await comprobantesService.createComprobante(payload);
+        // Creamos el comprobante y guardamos la respuesta
+        const nuevoComprobante = await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
+        
+        // Intentamos descargar y abrir el PDF automáticamente
+        try {
+          // Asegurate de que tu backend devuelva el ID del comprobante creado en la respuesta
+          const idCreado = nuevoComprobante.id; 
+          
+          if (idCreado) {
+            toast.info("Abriendo comprobante para imprimir...");
+
+            const locRemitenteObj = localidades.find(l => l.id === payload.localidad_remitente_id);
+            const locDestObj = localidades.find(l => l.id === payload.localidad_destinatario_id);
+
+            const datosParaPdf = {
+                ...nuevoComprobante,
+                cliente: { razon_social: data.nombre_remitente },
+                localidad_remitente_rel: { nombre: locRemitenteObj ? locRemitenteObj.nombre : '' },
+                localidad_destinatario_rel: { nombre: locDestObj ? locDestObj.nombre : '' }
+            };
+
+            const blob = generarPdfLocal(datosParaPdf);
+            const url = window.URL.createObjectURL(blob);
+
+            const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;
+            const pdfWindow = window.open('');
+            if (pdfWindow) {
+              pdfWindow.document.write(`
+                <html>
+                  <head>
+                    <title>${titulo}</title>
+                    <style>
+                      body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+                      embed { width: 100vw; height: 100vh; border: none; }
+                    </style>
+                  </head>
+                  <body>
+                    <embed src="${url}" type="application/pdf">
+                  </body>
+                </html>
+              `);
+              
+              pdfWindow.document.close();
+            } else {
+              toast.error("El navegador bloqueó la ventana emergente.");
+            }
+            
+            // Limpia la memoria después de unos segundos
+            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+          }
+        } catch (pdfError) {
+          console.error("Error al generar PDF automático", pdfError);
+          toast.error("El comprobante se creó, pero falló la apertura automática del PDF.");
+        }
+
         navigate('/comprobantes');
       }
       
@@ -87,7 +191,7 @@ export default function ComprobanteForm() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 pb-12">
+    <div className="space-y-6 pb-10">
       
       {/* Header */}
       <div className="flex items-center gap-4 bg-card p-4 rounded-lg border border-border shadow-sm">
@@ -112,7 +216,7 @@ export default function ComprobanteForm() {
               <label className="block text-sm font-medium text-foreground mb-1">Tipo de Comprobante *</label>
               <select 
                 {...register("tipo", { required: "El tipo es obligatorio" })}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
               >
                 <option value="">Seleccione...</option>
                 <option value="Comprobante de Envío">Comprobante de Envío</option>
@@ -120,24 +224,27 @@ export default function ComprobanteForm() {
               </select>
               {errors.tipo && <span className="text-destructive text-xs mt-1">{errors.tipo.message}</span>}
             </div>
+            
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Número *</label>
-              <input 
-                type="text" 
-                {...register("numero_comprobante", { required: "El número es obligatorio" })}
+              <Input 
+                label={<>Número {cargandoNumero && <Loader2 className="inline w-3 h-3 animate-spin text-primary" />} *</>}
+                error={errors.numero_comprobante?.message}
                 placeholder="Ej: 0001-00001234"
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                disabled={tipoSeleccionado === "Comprobante de Envío" || cargandoNumero}
+                className="font-medium disabled:bg-secondary/50"
+                {...register("numero_comprobante", { required: "El número es obligatorio" })}
               />
-              {errors.numero_comprobante && <span className="text-destructive text-xs mt-1">{errors.numero_comprobante.message}</span>}
+              {tipoSeleccionado === "Comprobante de Envío" && (
+                <p className="text-[10px] text-muted-foreground mt-1">Número asignado automáticamente.</p>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Fecha de Emisión *</label>
-              <input 
-                type="date" 
-                {...register("fecha_emision", { required: "La fecha es obligatoria" })}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
+            
+            <Input 
+              type="date"
+              label="Fecha de Emisión *"
+              error={errors.fecha_emision?.message}
+              {...register("fecha_emision", { required: "La fecha es obligatoria" })}
+            />
           </div>
         </div>
 
@@ -147,37 +254,47 @@ export default function ComprobanteForm() {
             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Datos del Remitente</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Cliente *</label>
-                <select 
-                  {...register("cliente_remitente_id", { required: "Seleccione un cliente" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-                >
-                  <option value="">Seleccione un cliente...</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre_fantasia || c.razon_social || `Cliente ${c.id}`}</option>
-                  ))}
-                </select>
-                {errors.cliente_remitente_id && <span className="text-destructive text-xs mt-1">{errors.cliente_remitente_id.message}</span>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Domicilio *</label>
-                <input 
-                  type="text" 
-                  {...register("domicilio_remitente", { required: "Campo obligatorio" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                <label className="block text-sm font-medium text-foreground mb-1">Nombre Remitente *</label>
+                <Controller
+                  name="nombre_remitente"
+                  control={control}
+                  rules={{ required: "El nombre es obligatorio" }}
+                  render={({ field }) => (
+                    <ClienteAutocomplete
+                      clientes={clientes}
+                      value={field.value || ''}
+                      onChange={(texto) => {
+                        field.onChange(texto);
+                        setValue("cliente_remitente_id", null, { shouldValidate: true });
+                      }}
+                      onSelect={(cliente) => {
+                        field.onChange(cliente.razon_social);
+                        setValue("cliente_remitente_id", cliente.id, { shouldValidate: true });
+                        setValue("domicilio_remitente", cliente.direccion || '');
+                      }}
+                      placeholder="Buscar cliente registrado..."
+                    />
+                  )}
                 />
+                {errors.nombre_remitente && <span className="text-destructive text-xs mt-1 block">{errors.nombre_remitente.message}</span>}
               </div>
+              <Input 
+                label="Domicilio *"
+                error={errors.domicilio_remitente?.message}
+                {...register("domicilio_remitente", { required: "Campo obligatorio" })}
+              />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Localidad *</label>
                 <select 
                   {...register("localidad_remitente_id", { required: "Seleccione localidad" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Seleccione...</option>
                   {localidades.map(l => (
                     <option key={l.id} value={l.id}>{l.nombre}</option>
                   ))}
                 </select>
+                {errors.localidad_remitente_id && <span className="text-destructive text-xs mt-1">{errors.localidad_remitente_id.message}</span>}
               </div>
             </div>
           </div>
@@ -187,31 +304,42 @@ export default function ComprobanteForm() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Nombre / Razón Social *</label>
-                <input 
-                  type="text" 
-                  {...register("nombre_destinatario", { required: "Campo obligatorio" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                <Controller
+                  name="nombre_destinatario"
+                  control={control}
+                  rules={{ required: "Campo obligatorio" }}
+                  render={({ field }) => (
+                    <ClienteAutocomplete
+                      clientes={clientes}
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      onSelect={(cliente) => {
+                        field.onChange(cliente.razon_social || cliente.nombre_fantasia);
+                        setValue("domicilio_destinatario", cliente.direccion || cliente.direccion_fiscal || '');
+                      }}
+                      placeholder="Buscar en agenda o escribir..."
+                    />
+                  )}
                 />
+                {errors.nombre_destinatario && <span className="text-destructive text-xs mt-1">{errors.nombre_destinatario.message}</span>}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Domicilio *</label>
-                <input 
-                  type="text" 
-                  {...register("domicilio_destinatario", { required: "Campo obligatorio" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-                />
-              </div>
+              <Input 
+                label="Domicilio *"
+                error={errors.domicilio_destinatario?.message}
+                {...register("domicilio_destinatario", { required: "Campo obligatorio" })}
+              />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Localidad *</label>
                 <select 
                   {...register("localidad_destinatario_id", { required: "Seleccione localidad" })}
-                  className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
                   <option value="">Seleccione...</option>
                   {localidades.map(l => (
                     <option key={l.id} value={l.id}>{l.nombre}</option>
                   ))}
                 </select>
+                {errors.localidad_destinatario_id && <span className="text-destructive text-xs mt-1">{errors.localidad_destinatario_id.message}</span>}
               </div>
             </div>
           </div>
@@ -221,38 +349,32 @@ export default function ComprobanteForm() {
         <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
           <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Costos y Carga</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Cant. Bultos *</label>
-              <input 
-                type="number" min="1"
-                {...register("cantidad_bultos", { required: true, min: 1 })}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none font-bold text-lg"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Contra Reembolso ($)</label>
-              <input 
-                type="number" step="0.01"
-                {...register("importe_contra_reembolso")}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">Flete Pago ($)</label>
-              <input 
-                type="number" step="0.01"
-                {...register("importe_flete_pago")}
-                className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-foreg round mb-1 text-primary">Flete a Cobrar ($)</label>
-              <input 
-                type="number" step="0.01"
-                {...register("importe_flete_cobro")}
-                className="w-full px-3 py-2 rounded-md border border-primary bg-background focus:ring-2 focus:ring-primary outline-none font-bold"
-              />
-            </div>
+            <Input 
+              type="number"
+              min="1"
+              label="Cant. Bultos *"
+              className="font-bold text-lg"
+              {...register("cantidad_bultos", { required: true, min: 1 })}
+            />
+            <Input 
+              type="number"
+              step="0.01"
+              label="Contra Reembolso ($)"
+              {...register("importe_contra_reembolso")}
+            />
+            <Input 
+              type="number"
+              step="0.01"
+              label="Flete Pago ($)"
+              {...register("importe_flete_pago")}
+            />
+            <Input 
+              type="number"
+              step="0.01"
+              label="Flete a Cobrar ($)"
+              className="font-bold border-primary"
+              {...register("importe_flete_cobro")}
+            />
           </div>
         </div>
 
@@ -263,29 +385,20 @@ export default function ComprobanteForm() {
             {...register("observaciones")}
             rows="3"
             placeholder="Aclaraciones sobre la entrega, horarios, condiciones..."
-            className="w-full px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary outline-none resize-none"
+            className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
           ></textarea>
         </div>
 
         {/* Botones de Accion */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-border">
-          <button 
-            type="button" 
-            onClick={() => navigate('/comprobantes')}
-            className="px-6 py-2 border border-border rounded-md font-medium text-foreground hover:bg-secondary transition-colors"
-          >
+          <Button type="button" variant="outline" onClick={() => navigate('/comprobantes')}>
             Cancelar
-          </button>
-          <button 
-            type="submit" 
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-md font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
-          >
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
             {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
             {isEditing ? 'Guardar Cambios' : 'Generar Comprobante'}
-          </button>
+          </Button>
         </div>
-
       </form>
     </div>
   );

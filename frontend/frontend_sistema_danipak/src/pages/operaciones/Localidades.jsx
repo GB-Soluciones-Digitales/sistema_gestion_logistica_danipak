@@ -103,16 +103,16 @@ export default function Localidades() {
         { key: 'codigo_postal', label: 'CP' },
         { key: 'estado', label: 'Estado',
           render: (fila) => (
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${fila.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${fila.estado ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {fila.estado ? 'Activa' : 'Inactiva'}
-              </span>
+            </span>
           )
         },
         { key: 'acciones', label: 'Acciones',
           render: (fila) => (
-              <Button variant="outline" onClick={() => abrirModalEditar(fila)} className="px-2 py-1 h-8">
-              <Edit2 size={16} className="text-muted-foreground" />
-              </Button>
+            <Button variant="outline" onClick={() => abrirModalEditar(fila)} className="px-2 py-1 h-8" title="Editar">
+              <Edit2 size={16} className="text-amber-600" />
+            </Button>
           )
         }
     ];
@@ -120,58 +120,66 @@ export default function Localidades() {
     const totalPages = Math.ceil(totalRegistros / limit);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-foreground">Localidades</h1>
+          <p className="text-muted-foreground text-sm mt-1">Gestión de localidades frecuentes</p>
         </div>
-        <Button onClick={abrirModalCrear}>
+        <Button onClick={abrirModalCrear} className="w-full sm:w-auto">
           <Plus size={20} className="mr-2" />
           Nueva Localidad
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 max-w-sm border border-input rounded-md px-3 py-2 bg-background">
-        <Search size={18} className="text-muted-foreground" />
-        <input 
-          type="text"
-          placeholder="Buscar por nombre..."
-          className="w-full bg-transparent focus:outline-none text-sm text-foreground"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+      <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <input 
+            type="text"
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+          />
+        </div>
       </div>
 
-      {loading && localidades.length === 0 ? (
-        <div className="p-8 text-center text-muted-foreground">Buscando...</div>
-      ) : (
-        <DataTable columns={columnas} data={localidades} />
-      )}
+      <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
+        
+        {loading && localidades.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground">Cargando...</div>
+        ) : (
+          <DataTable columns={columnas} data={localidades} />
+        )}
 
-      <div className="flex items-center justify-between py-2">
-        <span className="text-sm text-muted-foreground">
-          Mostrando {localidades.length} de {totalRegistros} localidades
-        </span>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="px-2 py-1"
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-          >
-            <ChevronLeft size={18} />
-          </Button>
-          <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
-          <Button 
-            variant="outline" 
-            className="px-2 py-1"
-            disabled={page === totalPages || totalPages === 0 || loading}
-            onClick={() => setPage(p => p + 1)}
-          >
-            <ChevronRight size={18} />
-          </Button>
-        </div>
+        {!loading && totalPages > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
+            <span className="text-sm text-muted-foreground">
+              Mostrando {localidades.length} de {totalRegistros} localidades
+            </span>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                className="px-2 py-1 h-8"
+                disabled={page === 1 || loading}
+                onClick={() => setPage(p => p - 1)}
+              >
+                <ChevronLeft size={18} />
+              </Button>
+              <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
+              <Button 
+                variant="outline" 
+                className="px-2 py-1"
+                disabled={page === totalPages}
+                onClick={() => setPage(p => p + 1)}
+              >
+                <ChevronRight size={18} />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal 

@@ -1,9 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
 from app.crud import crud_usuario
-from app.schemas.usuario import UsuarioCreate, UsuarioUpdate, UsuarioResponse
+from app.schemas.usuario import UsuarioCreate, UsuarioPaginatedResponse, UsuarioUpdate, UsuarioResponse
 
 router = APIRouter(prefix="/usuarios", tags=["Usuarios"])
 
@@ -19,9 +21,9 @@ def create_usuario(usuario_in: UsuarioCreate, db: Session = Depends(get_db)):
     
     return crud_usuario.create_usuario(db=db, usuario=usuario_in)
 
-@router.get("/", response_model=list[UsuarioResponse])
-def get_usuarios(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud_usuario.get_usuarios(db=db, skip=skip, limit=limit)
+@router.get("/", response_model=UsuarioPaginatedResponse)
+def get_usuarios(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud_usuario.get_usuarios(db=db, skip=skip, limit=limit, search=search)
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
 def get_usuario(usuario_id: int, db: Session = Depends(get_db)):

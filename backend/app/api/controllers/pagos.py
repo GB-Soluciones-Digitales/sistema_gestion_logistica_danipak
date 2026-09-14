@@ -1,9 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db, get_db
+from app.api.deps import get_current_user, get_db
 from app.crud import crud_pago
-from app.schemas.pago import PagoResponse, PagoCreate, PagoUpdate
+from app.schemas.pago import PagoPaginatedResponse, PagoResponse, PagoCreate, PagoUpdate
 
 router = APIRouter(prefix="/pagos", tags=["Pagos"])
 
@@ -15,9 +17,9 @@ def create_pago(pago_in: PagoCreate, db: Session = Depends(get_db), current_user
     
     return crud_pago.create_pago(db=db, pago=pago_in, usuario_id=current_user.id)
 
-@router.get("/", response_model=list[PagoResponse])
-def get_pagos(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    return crud_pago.get_pagos(db=db, skip=skip, limit=limit)
+@router.get("/", response_model=PagoPaginatedResponse)
+def get_pagos(skip: int = 0, limit: int = 50, search: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud_pago.get_pagos(db=db, skip=skip, limit=limit, search=search)
 
 @router.get("/{pago_id}", response_model=PagoResponse)
 def get_pago(pago_id: int, db: Session = Depends(get_db)):
@@ -35,12 +37,13 @@ def update_pago(pago_id: int, pago_in: PagoUpdate, db: Session = Depends(get_db)
     return crud_pago.update_pago(db=db, db_pago=db_pago, pago_in=pago_in)
 
 @router.put("/{pago_id}/anular", response_model=PagoResponse)
-def anular_pago(pago_id: int, db: Session = Depends(get_db)):
+def anular_pago(pago_id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     db_pago = crud_pago.get_pago_by_id(db, pago_id)
+
     if not db_pago:
         raise HTTPException(status_code=404, detail="Pago no encontrado.")
     
     if db_pago.anulado:
         raise HTTPException(status_code=400, detail="El pago ya se encuentra anulado.")
     
-    return crud_pago.anular_pago(db=db, pago_id=pago_id)
+    return crud_pago.anular_pago(db=db, pago_id=pago_id, usuario_id=current_user.id)

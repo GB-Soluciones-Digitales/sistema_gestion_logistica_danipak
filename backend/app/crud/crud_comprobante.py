@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from sqlalchemy import desc, extract, or_
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import date, datetime
 
 from app.models.Comprobante import Comprobante
 from app.schemas.comprobante import ComprobanteCreate, ComprobanteUpdate
@@ -59,7 +59,7 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
 def get_comprobante_by_id(db: Session, comprobante_id: int) -> Comprobante | None:
     return db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
 
-def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, mes: int = None, cliente_id: int = None, tipo: str = None) -> dict:
+def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, mes: int = None, cliente_id: int = None, tipo: str = None, fecha_desde: date = None, fecha_hasta: date = None) -> dict:
     query = db.query(Comprobante)
     
     if search:
@@ -82,6 +82,11 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
         )
     if mes:
         query = query.filter(extract('month', Comprobante.fecha_emision) == mes)
+
+    if fecha_desde:
+        query = query.filter(Comprobante.fecha_emision >= fecha_desde)
+    if fecha_hasta:
+        query = query.filter(Comprobante.fecha_emision <= fecha_hasta)
         
     total = query.count()
     items = query.order_by(

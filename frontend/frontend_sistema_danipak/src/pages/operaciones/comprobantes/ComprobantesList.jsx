@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as XLSX from 'xlsx';
 
 import { comprobantesService } from '../../../api/comprobantesService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -19,8 +20,9 @@ export default function ComprobantesList() {
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
   const [downloading, setDownloading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtros, setFiltros] = useState({ tipo: "", mes: "" });
+  const [filtros, setFiltros] = useState({ tipo: "", mes: "", fecha_desde: "", fecha_hasta: "" });
   const [showFilters, setShowFilters] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -105,6 +107,43 @@ export default function ComprobantesList() {
     anularMutation.mutate(id);
   };
 
+  const handleExportarExcel = async () => {
+    setIsExporting(true);
+    toast.info("Generando archivo Excel...");
+    try {
+      const data = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
+      const comprobantesExport = data.items || [];
+
+      if (comprobantesExport.length === 0) {
+        toast.warning("No hay datos para exportar con estos filtros.");
+        return;
+      }
+
+      const datosFormateados = comprobantesExport.map(comp => ({
+        'Fecha Emisión': formatDate(comp.fecha_emision),
+        'Tipo': comp.tipo_comprobante || comp.tipo,
+        'Número': comp.numero_comprobante,
+        'Remitente': comp.cliente?.razon_social || '-',
+        'Destinatario': comp.nombre_destinatario,
+        'Bultos': comp.cantidad_bultos,
+        'Flete a Cobrar ($)': comp.importe_flete_cobro,
+        'Estado': comp.estado
+      }));
+
+      const hoja = XLSX.utils.json_to_sheet(datosFormateados);
+      const libro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(libro, hoja, "Comprobantes");
+      
+      XLSX.writeFile(libro, `Reporte_Comprobantes_${new Date().getTime()}.xlsx`);
+      toast.success("Excel descargado correctamente");
+    } catch (error) {
+      console.error("Error exportando a Excel", error);
+      toast.error("Ocurrió un error al generar el Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const columnas = [
     { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
     { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo_comprobante || '-' },
@@ -164,33 +203,45 @@ export default function ComprobantesList() {
             />
           </div>
 
-          <Button 
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="w-full sm:w-auto"
-          >
-            <Filter size={18} className="mr-2" />
-            Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline"
+              onClick={handleExportarExcel}
+              disabled={isExporting || isLoading}
+              className="w-full sm:w-auto text-green-700 border-green-200 hover:bg-green-50"
+            >
+              <Sheet size={18} className="mr-2" />
+              {isExporting ? 'Procesando...' : 'Excel'}
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full sm:w-auto"
+            >
+              <Filter size={18} className="mr-2" />
+              Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
+            </Button>
+          </div>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
             <select 
               name="tipo" 
               value={filtros.tipo} 
               onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring"
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               <option value="">Todos los Tipos</option>
-              <option value="Comprobante de Envío">Comprobante de Envío</option>
+              <option value="Comprobante de Envío">Envío</option>
               <option value="Remito">Remito</option>
             </select>
             <select 
               name="mes" 
               value={filtros.mes} 
               onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring"
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
             >
               <option value="">Cualquier Mes</option>
               <option value="1">Enero</option>
@@ -206,6 +257,26 @@ export default function ComprobantesList() {
               <option value="11">Noviembre</option>
               <option value="12">Diciembre</option>
             </select>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
+              <input 
+                type="date" 
+                name="fecha_desde" 
+                value={filtros.fecha_desde} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Hasta</label>
+              <input 
+                type="date" 
+                name="fecha_hasta" 
+                value={filtros.fecha_hasta} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
           </div>
         )}
       </div>

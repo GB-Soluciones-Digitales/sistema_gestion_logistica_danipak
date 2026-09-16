@@ -35,6 +35,23 @@ export const comprobantesService = {
                     item.nombre_destinatario?.toLowerCase().includes(searchLower)
                 );
             }
+
+            if (filtros.tipo) {
+                offlineItems = offlineItems.filter(item => item.tipo === filtros.tipo || item.tipo_comprobante === filtros.tipo);
+            }
+            if (filtros.mes) {
+                offlineItems = offlineItems.filter(item => {
+                    if (!item.fecha_emision) return false;
+                    const mesItem = new Date(item.fecha_emision).getMonth() + 1;
+                    return mesItem.toString() === filtros.mes.toString();
+                });
+            }
+            if (filtros.fecha_desde) {
+                offlineItems = offlineItems.filter(item => item.fecha_emision >= filtros.fecha_desde);
+            }
+            if (filtros.fecha_hasta) {
+                offlineItems = offlineItems.filter(item => item.fecha_emision <= filtros.fecha_hasta);
+            }
             
             const skip = (page - 1) * limit;
             const paginatedItems = offlineItems.slice(skip, skip + limit);
@@ -43,7 +60,7 @@ export const comprobantesService = {
 
         try {
             const skip = (page - 1) * limit;
-            const response = await api.get('/api/comprobantes/', { 
+            const response = await api.get('/api/comprobantes/', {
                 params: { skip, limit, search, ...filtros } 
             });
             

@@ -69,7 +69,7 @@ export default function App() {
             <Route path="/cuentas-corrientes/:id" element={<CuentaDetalle />} />
             <Route path="/localidades" element={<Localidades />} />
             <Route path="/clientes" element={<Clientes />} />
-            <Route path="/auditorias" element={<Auditoria />} />
+            <Route path="/auditoria" element={<Auditoria />} />
           </Route>
 
           {/* Fallback */}

@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import {Search, ChevronLeft, ChevronRight} from 'lucide-react';
 import {toast} from "sonner";
-import {auditoriaServices } from "../../api/auditoriaServices";
-
+import { auditoriaService} from '../../api/auditoriaServices'
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
 import DataTable from '../../components/ui/DataTable';
 
 export default function Auditoria() {
@@ -28,7 +26,7 @@ export default function Auditoria() {
     const fetchAuditorias = useCallback(async () => {
         try{
             setLoading(true);
-            const data = await auditoriaServices.getAll(page,limit,search);
+            const data = await auditoriaService.getAll(page,limit,search);
             setAuditoria(data.items || []);
             setTotalRegistros(data.total);
         } catch (err) {
@@ -57,13 +55,18 @@ export default function Auditoria() {
     const totalPages = Math.ceil(totalRegistros / limit)
 
     return (
+        
         <div className="space-y-6">
+            <div>
+               <h1 className='text-2xl font-display font-bold text-foreground'>Auditorias</h1>
+               <p className='text-muted-foreground text-sm mt-1'>Historial de Auditorias Realizadas.</p> 
+            </div>
 
            <div className="flex items-center gap-2  max-w-sm border border-input rounded-md px-3 py-2 bg-background">
                 <Search size={18} className="text-muted-foreground" />
                 <input 
                     type="text"
-                    placeholder="Buscar por fechads..."
+                    placeholder="Buscar por..."
                     className="w-full bg-transparent focus:outline-none text-sm text-foreground"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -73,12 +76,12 @@ export default function Auditoria() {
            {loading && auditoria.length === 0 ?(
                <div className="p-8 text-center text-muted-foreground">Buscando...</div>
            ) : (
-                <DataTable columns={columnas} data={clientes} />
+                <DataTable columns={columnas} data={auditoria} />
            )}
 
            <div className="flex items-center justify-between py-2">
                <span className="text-sm text-muted-foreground">
-                   Mostrando{auditoria.length} de {totalRegistros} Auditorias
+                   Mostrando {auditoria.length} de {totalRegistros} Auditorias
                </span>
              <div className="flex items-center gap-2">
                      <Button

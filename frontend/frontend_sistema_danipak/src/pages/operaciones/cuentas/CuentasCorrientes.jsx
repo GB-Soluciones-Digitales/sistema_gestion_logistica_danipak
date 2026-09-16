@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import { movimientosService } from '../../../api/movimientosService';
 import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
+import { exportarAExcel } from '../../../utils/excelGenerator';
 
 export default function CuentasCorrientes() {
   const navigate = useNavigate();
@@ -13,6 +15,7 @@ export default function CuentasCorrientes() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const [filtroSaldo, setFiltroSaldo] = useState('Todos');
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['cuentas-corrientes'],
@@ -33,6 +36,29 @@ export default function CuentasCorrientes() {
     
     return matchSearch && matchSaldo;
   });
+
+  const handleExportarExcel = () => {
+    setIsExporting(true);
+    toast.info("Generando archivo Excel...");
+    try {
+      if (cuentasFiltradas.length === 0) {
+        toast.warning("No hay datos para exportar con este filtro.");
+        return;
+      }
+
+      const datosFormateados = cuentasFiltradas.map(c => ({
+        'Cliente': c.razon_social,
+        'CUIT / DNI': c.cuit_dni,
+        'Teléfono': c.telefono || '-',
+        'Saldo Total ($)': c.saldo_total,
+        'Estado': c.saldo_total > 0 ? 'Deudor' : (c.saldo_total < 0 ? 'Saldo a Favor' : 'Al Día')
+      }));
+
+      exportarAExcel(datosFormateados, 'Estado_Cuentas_Corrientes', 'Saldos');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columnas = [
     { key: 'razon_social', label: 'Cliente' },
@@ -67,7 +93,7 @@ export default function CuentasCorrientes() {
       </div>
 
       <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-between">
           <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <input 
@@ -79,16 +105,28 @@ export default function CuentasCorrientes() {
             />
           </div>
           
-          <select 
-            value={filtroSaldo} 
-            onChange={(e) => setFiltroSaldo(e.target.value)}
-            className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary sm:w-auto w-full"
-          >
-            <option value="Todos">Todos los saldos</option>
-            <option value="Deudores">Solo Deudores (Deben)</option>
-            <option value="A favor">Saldos A Favor</option>
-            <option value="Cero">Saldos en Cero</option>
-          </select>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline"
+              onClick={handleExportarExcel}
+              disabled={isExporting || isLoading}
+              className="w-full sm:w-auto text-green-700 border-green-200 hover:bg-green-50"
+            >
+              <Sheet size={18} className="mr-2" />
+              {isExporting ? 'Exportando...' : 'Excel'}
+            </Button>
+
+            <select 
+              value={filtroSaldo} 
+              onChange={(e) => setFiltroSaldo(e.target.value)}
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary w-full sm:w-auto"
+            >
+              <option value="Todos">Todos los saldos</option>
+              <option value="Deudores">Solo Deudores (Deben)</option>
+              <option value="A favor">Saldos A Favor</option>
+              <option value="Cero">Saldos en Cero</option>
+            </select>
+          </div>
         </div>
       </div>
 

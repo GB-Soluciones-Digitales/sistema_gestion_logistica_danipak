@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { movimientosService } from '../../../api/movimientosService';
 import { facturaService } from '../../../api/facturaService';
@@ -17,15 +18,10 @@ import { generarReciboPdf } from '../../../utils/pdfReciboPago';
 export default function CuentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  // Estados de datos
-  const [resumen, setResumen] = useState({ saldo_total: 0, cantidad_movimientos: 0 });
-  const [movimientos, setMovimientos] = useState([]);
-  const [loading, setLoading] = useState(true);
-  
   // Paginación
   const [page, setPage] = useState(1);
-  const [totalRegistros, setTotalRegistros] = useState(0);
   const limit = 10;
 
   // Estados de Modales
@@ -48,91 +44,90 @@ export default function CuentaDetalle() {
     fecha_pago: new Date().toISOString().split('T')[0]
   });
 
-  const fetchDetalle = useCallback(async () => {
-    try {
-      setLoading(true);
-      const [resumenData, movimientosData] = await Promise.all([
-        movimientosService.getResumen(id),
-        movimientosService.getAllByCliente(id, page, limit)
-      ]);
+  const { data: resumen = { saldo_total: 0, cantidad_movimientos: 0, razon_social: 'Cargando...' }, isLoading: loadingResumen } = useQuery({
+    queryKey: ['cuenta-resumen', id],
+    queryFn: () => movimientosService.getResumen(id),
+  });
 
-      setResumen(resumenData);
-      setMovimientos(movimientosData.items);
-      setTotalRegistros(movimientosData.total);
-    } catch (err) {
-      toast.error('Error al cargar el detalle de la cuenta');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [id, page]);
+  const { data: movimientosData, isLoading: loadingMovimientos } = useQuery({
+    queryKey: ['cuenta-movimientos', id, page, limit],
+    queryFn: () => movimientosService.getAllByCliente(id, page, limit),
+  });
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchDetalle();
-  }, [fetchDetalle]);
+  const movimientos = movimientosData?.items || [];
+  const totalRegistros = movimientosData?.total || 0;
+  const isLoading = loadingResumen || loadingMovimientos;
+  const totalPages = Math.ceil(totalRegistros / limit);
 
-  const handleSubmitFactura = async (e) => {
-    e.preventDefault();
-    try {
-      await facturaService.createFactura({
-        ...formFactura,
-        cliente_id: parseInt(id),
-        importe_total: parseFloat(formFactura.importe_total)
-      });
+  const facturaMutation = useMutation({
+    mutationFn: (nuevaFactura) => facturaService.createFactura(nuevaFactura),
+    onSuccess: () => {
       toast.success("Factura registrada y deuda actualizada");
       setModalFacturaOpen(false);
-      setFormFactura({ ...formFactura, numero_factura: '', importe_total: '', observaciones: '' });
-      fetchDetalle();
-    } catch (err) {
+      setFormFactura({ numero_factura: '', mes_correspondiente: '', fecha: new Date().toISOString().split('T')[0], importe_total: '', observaciones: '' });
+      queryClient.invalidateQueries({ queryKey: ['cuenta-resumen', id] });
+      queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos', id] });
+    },
+    onError: (err) => {
       toast.error(err.response?.data?.detail || "Error al registrar la factura");
     }
-  };
+  });
 
-  const handleSubmitPago = async (e) => {
-    e.preventDefault();
-    try {
-      const nuevoPago = await pagoService.createPago({
-        ...formPago,
-        cliente_id: parseInt(id),
-        monto: parseFloat(formPago.monto)
-      });
-      
+  const pagoMutation = useMutation({
+    mutationFn: (nuevoPagoData) => pagoService.createPago(nuevoPagoData),
+    onSuccess: (nuevoPago) => {
       toast.success("Pago registrado con éxito");
-
-      const blob = generarReciboPdf(nuevoPago, resumen.razon_social);
-      const url = window.URL.createObjectURL(blob);
       
-      const pdfWindow = window.open('');
-      if (pdfWindow) {
-        pdfWindow.document.write(`
-          <html>
-            <head>
-              <title>Recibo_${nuevoPago.numero_recibo}.pdf</title>
-              <style>
-                body { margin: 0; overflow: hidden; background-color: #333; }
-                embed { width: 100vw; height: 100vh; border: none; }
-              </style>
-            </head>
-            <body>
-              <embed src="${url}" type="application/pdf">
-            </body>
-          </html>
-        `);
-        pdfWindow.document.close();
-      } else {
-        toast.error("El navegador bloqueó la ventana del PDF. Permita las ventanas emergentes.");
+      try {
+        const blob = generarReciboPdf(nuevoPago, resumen.razon_social);
+        const url = window.URL.createObjectURL(blob);
+        const pdfWindow = window.open('');
+        if (pdfWindow) {
+          pdfWindow.document.write(`
+            <html>
+              <head>
+                <title>Recibo_${nuevoPago.numero_recibo}.pdf</title>
+                <style>body { margin: 0; overflow: hidden; background-color: #333; } embed { width: 100vw; height: 100vh; border: none; }</style>
+              </head>
+              <body><embed src="${url}" type="application/pdf"></body>
+            </html>
+          `);
+          pdfWindow.document.close();
+        } else {
+          toast.error("El navegador bloqueó la ventana del PDF.");
+        }
+        setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+      } catch (e) {
+         console.error("Error al generar PDF del recibo", e);
       }
-      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
 
-      // Cierre de modal y limpieza
       setModalPagoOpen(false);
-      setFormPago({ ...formPago, numero_recibo: '', monto: '' });
-      fetchDetalle(); 
+      setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'Efectivo', fecha_pago: new Date().toISOString().split('T')[0] });
       
-    } catch (err) {
+      queryClient.invalidateQueries({ queryKey: ['cuenta-resumen', id] });
+      queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos', id] });
+    },
+    onError: (err) => {
       toast.error(err.response?.data?.detail || "Error al registrar el pago");
     }
+  });
+
+  const handleSubmitFactura = (e) => {
+    e.preventDefault();
+    facturaMutation.mutate({
+      ...formFactura,
+      cliente_id: parseInt(id),
+      importe_total: parseFloat(formFactura.importe_total)
+    });
+  };
+
+  const handleSubmitPago = (e) => {
+    e.preventDefault();
+    pagoMutation.mutate({
+      ...formPago,
+      cliente_id: parseInt(id),
+      monto: parseFloat(formPago.monto)
+    });
   };
 
   const columnas = [
@@ -159,8 +154,6 @@ export default function CuentaDetalle() {
     }
   ];
 
-  const totalPages = Math.ceil(totalRegistros / limit);
-
   return (
     <div className="space-y-6 pb-10">
       {/* Botón Volver y Acciones */}
@@ -171,7 +164,7 @@ export default function CuentaDetalle() {
           </Button>
           <div>
             <h1 className="text-2xl font-display font-bold text-foreground">Detalle de Cuenta</h1>
-            <p className="text-muted-foreground text-sm mt-1">Historial del cliente</p>
+            <p className="text-muted-foreground text-sm mt-1">Historial de {resumen.razon_social}</p>
           </div>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -201,23 +194,23 @@ export default function CuentaDetalle() {
       {/* Tabla Historial */}
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading && movimientos.length === 0 ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando historial...</div>
         ) : (
           <DataTable columns={columnas} data={movimientos} />
         )}
 
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
               Mostrando {movimientos.length} de {totalRegistros}
             </span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" className="px-2 py-1 h-8" disabled={page === 1 || loading} onClick={() => setPage(p => p - 1)}>
+              <Button variant="outline" className="px-2 py-1 h-8" disabled={page === 1 || isLoading} onClick={() => setPage(p => p - 1)}>
                 <ChevronLeft size={18} />
               </Button>
               <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
-              <Button variant="outline" className="px-2 py-1" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
+              <Button variant="outline" className="px-2 py-1 h-8" disabled={page === totalPages || isLoading} onClick={() => setPage(p => p + 1)}>
                 <ChevronRight size={18} />
               </Button>
             </div>
@@ -236,7 +229,9 @@ export default function CuentaDetalle() {
           
           <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button type="button" variant="outline" onClick={() => setModalFacturaOpen(false)}>Cancelar</Button>
-            <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white border-transparent">Generar Cargo</Button>
+            <Button type="submit" disabled={facturaMutation.isPending} className="bg-red-600 hover:bg-red-700 text-white border-transparent">
+              {facturaMutation.isPending ? 'Cargando...' : 'Generar Cargo'}
+            </Button>
           </div>
         </form>
       </Modal>
@@ -263,7 +258,9 @@ export default function CuentaDetalle() {
           
           <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button type="button" variant="outline" onClick={() => setModalPagoOpen(false)}>Cancelar</Button>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white border-transparent">Confirmar Pago</Button>
+            <Button type="submit" disabled={pagoMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white border-transparent">
+              {pagoMutation.isPending ? 'Registrando...' : 'Confirmar Pago'}
+            </Button>
           </div>
         </form>
       </Modal>

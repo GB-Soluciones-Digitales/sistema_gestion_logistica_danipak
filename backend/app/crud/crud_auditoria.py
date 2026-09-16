@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import func, Date
 
 from app.models.Auditoria import Auditoria
 from app.schemas.auditoria import AuditoriaCreate
 
-def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afectada: str = None, accion: str = None, usuario_id: int = None) -> dict:
+def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afectada: str = None, accion: str = None, usuario_id: int = None, fecha: str = None) -> dict:
     query = db.query(Auditoria)
     
     if tabla_afectada:
@@ -12,6 +13,8 @@ def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afect
         query = query.filter(Auditoria.accion == accion)
     if usuario_id:
         query = query.filter(Auditoria.usuario_id == usuario_id)
+    if fecha:
+        query = query.filter(func.cast(Auditoria.fecha, Date) == fecha)
         
     total = query.count()
     items = query.order_by(Auditoria.fecha.desc()).offset(skip).limit(limit).all()
@@ -29,3 +32,6 @@ def create_auditoria_log(db: Session, auditoria: AuditoriaCreate) -> Auditoria:
     db.add(db_auditoria)
     db.flush()
     return db_auditoria
+
+
+

@@ -98,7 +98,6 @@ export default function Localidades() {
 
     // Aca pasamos los columnas a escribir
     const columnas = [
-        { key: 'id', label: 'ID' },
         { key: 'nombre', label: 'Localidad' },
         { key: 'codigo_postal', label: 'CP' },
         { key: 'estado', label: 'Estado',

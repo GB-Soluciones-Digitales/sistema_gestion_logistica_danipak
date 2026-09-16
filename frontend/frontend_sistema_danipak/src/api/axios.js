@@ -77,9 +77,8 @@ api.interceptors.response.use(
           
         } catch (refreshError) {
           // Si el refresh expira (pasaron los 7 dias), lo sacamos al login
-          toast.error('Su sesión ha expirado completamente.');
           localStorage.removeItem('token');
-          window.location.href = '/login';
+          window.dispatchEvent(new Event('session-expired'));
           return Promise.reject(refreshError);
         }
       } 

@@ -1,49 +1,35 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 import { movimientosService } from '../../../api/movimientosService';
 import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
 
 export default function CuentasCorrientes() {
-  const [cuentas, setCuentas] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [totalRegistros, setTotalRegistros] = useState(0);
   const limit = 10;
-  const navigate = useNavigate();
 
-  const fetchCuentas = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await movimientosService.getResumenGeneral();
-      setCuentas(data);
-      setTotalRegistros(data.totalRegistros || 0);
-    } catch (err) {
-      console.error('Error al cargar los saldos generales:', err);
-      toast.error('Error al cargar los saldos generales');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['cuentas-corrientes'],
+    queryFn: () => movimientosService.getResumenGeneral(),
+  });
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchCuentas();
-  }, [fetchCuentas]);
+  const cuentas = Array.isArray(data) ? data : (data?.items || []);
+  const totalRegistros = data?.totalRegistros || cuentas.length;
 
   // Filtrado local rápido
   const cuentasFiltradas = cuentas.filter(c => 
-    c.razon_social.toLowerCase().includes(searchTerm.toLowerCase())
+    c.razon_social?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columnas = [
     { key: 'razon_social', label: 'Cliente' },
     { key: 'cuit_dni', label: 'CUIT/DNI' },
-    { key: 'telefono', label: 'Teléfono' },
+    { key: 'telefono', label: 'Teléfono', render: (fila) => fila.telefono || '-' },
     { key: 'saldo_total', label: 'Estado de Cuenta',
       render: (fila) => (
         <span className={`font-bold ${fila.saldo_total > 0 ? 'text-red-600' : fila.saldo_total < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
@@ -87,33 +73,23 @@ export default function CuentasCorrientes() {
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Calculando saldos...</div>
         ) : (
           <DataTable columns={columnas} data={cuentasFiltradas} />
         )}
 
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
               Mostrando {cuentasFiltradas.length} de {totalRegistros} Cuentas Corrientes
             </span>
             <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setPage(p => p - 1)} disabled={page === 1 || isLoading} className="px-2 py-1 h-8">
                 <ChevronLeft size={18} />
               </Button>
-              <span className="text-sm font-medium">Página {page} de {totalPages}</span>
-              <Button 
-                variant="outline"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="px-2 py-1 h-8"
-              >
+              <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
+              <Button variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages } className="px-2 py-1 h-8">
                 <ChevronRight size={18} />
               </Button>
             </div>

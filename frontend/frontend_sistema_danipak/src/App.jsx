@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
+import { SessionExpiredModal } from './components/SessionExpiredModal';
 import NotFound from "./pages/error/NotFound";
 import ComprobantesList from './pages/operaciones/comprobantes/ComprobantesList';
 import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
@@ -45,6 +46,7 @@ export default function App() {
       {/* El Router maneja la navegacion en el navegador */}
       <BrowserRouter>
         <Toaster richColors position="top-center" />
+        <SessionExpiredModal />
         
         <Routes>
           

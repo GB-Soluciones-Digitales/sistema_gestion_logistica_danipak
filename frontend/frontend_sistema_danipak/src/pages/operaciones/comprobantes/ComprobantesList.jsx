@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { comprobantesService } from '../../../api/comprobantesService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -12,40 +13,36 @@ import { generarPdfLocal } from '../../../utils/pdfGenerator';
 
 export default function ComprobantesList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  const [comprobantes, setComprobantes] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
   const [downloading, setDownloading] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtros, setFiltros] = useState({
-    tipo: "",
-    mes: "",
-  });
+  const [filtros, setFiltros] = useState({ tipo: "", mes: "" });
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchComprobantes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await comprobantesService.getAll(currentPage, limit, searchTerm, filtros);
-      setComprobantes(data.items || []);
-      setTotalRecords(data.total || 0);
-    } catch (error) {
-      toast.error("Error al cargar los comprobantes");
-      console.error("Error al cargar los comprobantes", error)
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, limit, searchTerm, filtros]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros],
+    queryFn: () => comprobantesService.getAll(currentPage, limit, searchTerm, filtros),
+  });
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchComprobantes();
-  }, [fetchComprobantes]);
+  const comprobantes = data?.items || [];
+  const totalRecords = data?.total || 0;
+  const totalPages = Math.ceil(totalRecords / limit);
+
+  const anularMutation = useMutation({
+    mutationFn: (id) => comprobantesService.updateEstado(id, { estado: "Anulado" }),
+    onSuccess: () => {
+      toast.success("Comprobante anulado");
+      queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
+    },
+    onError: (error) => {
+      toast.error("Error al anular");
+      console.error("Error al anular", error);
+    }
+  });
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -102,23 +99,17 @@ export default function ComprobantesList() {
     setComprobanteAAnular(id);
   };
 
-  const confirmarAnulacion = async () => {
+  const confirmarAnulacion = () => {
     const id = comprobanteAAnular;
     setComprobanteAAnular(null);
-    try {
-      await comprobantesService.updateEstado(id, { estado: "Anulado" });
-      toast.success("Comprobante anulado");
-      fetchComprobantes();
-    } catch (error) {
-      toast.error("Error al anular");
-      console.error("Error al anular", error)
-    }
+    anularMutation.mutate(id);
   };
 
   const columnas = [
-    { key: 'fecha_emision', label: 'Fecha', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo_comprobante || '-' },
     { key: 'numero_comprobante', label: 'Número', render: (fila) => <span className="font-medium">{fila.numero_comprobante}</span> },
-    { key: 'nombre_destinatario', label: 'Destinatario' },
+    { key: 'nombre_destinatario', label: 'Destinatario', render: (fila) => fila.nombre_destinatario || '-' },
     { key: 'importe_flete_cobro', label: 'Flete Cobrar', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
     { key: 'estado', label: 'Estado',
       render: (fila) => (
@@ -139,15 +130,13 @@ export default function ComprobantesList() {
           <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">
             <Pencil size={16} className="text-amber-600" />
           </Button>
-          <Button variant="outline" onClick={() => handleAnular(fila.id)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Anular">
+          <Button variant="outline" onClick={() => handleAnular(fila.id)} disabled={fila.estado === 'Anulado' || anularMutation.isPending} className="px-2 py-1 h-8" title="Anular">
             <Ban size={16} className="text-red-600" />
           </Button>
         </div>
       )
     }
   ];
-
-  const totalPages = Math.ceil(totalRecords / limit);
 
   return (
     <div className="space-y-6 pb-10">
@@ -223,32 +212,22 @@ export default function ComprobantesList() {
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading && comprobantes.length === 0 ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <DataTable columns={columnas} data={comprobantes} />
         )}
         
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando página {currentPage} de {totalPages}
+              Mostrando página {comprobantes.length} de {totalRecords} comprobantes
             </span>
             <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || isLoading} className="px-2 py-1 h-8">
                 <ChevronLeft size={18} />
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 h-8">
                 <ChevronRight size={18} />
               </Button>
             </div>

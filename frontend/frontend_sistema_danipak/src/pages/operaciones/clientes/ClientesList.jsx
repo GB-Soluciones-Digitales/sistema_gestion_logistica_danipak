@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 import { clientesServices } from '../../../api/clientesServices';
 import DataTable from '../../../components/ui/DataTable';
@@ -9,9 +9,6 @@ import Button from '../../../components/ui/Button';
 
 export default function ClientesList() {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState([]);
-  const [totalRegistros, setTotalRegistros] = useState(0);
-  const [loading, setLoading] = useState(true);
   
   const [page, setPage] = useState(1);
   const limit = 10;
@@ -26,31 +23,14 @@ export default function ClientesList() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  useEffect(() => {
-    let ignore = false;
+  const { data, isLoading } = useQuery({
+    queryKey: ['clientes', page, limit, searchQuery],
+    queryFn: () => clientesServices.getAll(page, limit, searchQuery),
+  });
 
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const data = await clientesServices.getAll(page, limit, searchQuery);
-        if (!ignore) {
-          setClientes(data.items || []);
-          setTotalRegistros(data.total || 0);
-        }
-      } catch (error) {
-        if (!ignore) toast.error('Error al cargar los clientes');
-        console.error("Error al cargar los clientes", error)
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-
-    loadData();
-
-    return () => {
-      ignore = true;
-    };
-  }, [page, searchQuery, limit]);
+  const clientes = data?.items || [];
+  const totalRegistros = data?.total || 0;
+  const totalPages = Math.ceil(totalRegistros / limit);
 
   const columnas = [
     { key: 'razon_social', label: 'Razón Social' },
@@ -71,8 +51,6 @@ export default function ClientesList() {
       )
     }
   ];
-
-  const totalPages = Math.ceil(totalRegistros / limit);
 
   return (
     <div className="space-y-6 pb-10">
@@ -102,13 +80,13 @@ export default function ClientesList() {
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading && clientes.length === 0 ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <DataTable columns={columnas} data={clientes} />
         )}
         
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
               Mostrando {clientes.length} de {totalRegistros} clientes
@@ -117,7 +95,7 @@ export default function ClientesList() {
               <Button 
                 variant="outline"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
+                disabled={page === 1 || isLoading}
                 className="px-2 py-1 h-8"
               >
                 <ChevronLeft size={18} />
@@ -126,7 +104,7 @@ export default function ClientesList() {
               <Button 
                 variant="outline"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                disabled={page === totalPages || isLoading}
                 className="px-2 py-1 h-8"
               >
                 <ChevronRight size={18} />

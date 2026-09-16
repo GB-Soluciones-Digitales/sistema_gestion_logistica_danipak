@@ -59,7 +59,7 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
 def get_comprobante_by_id(db: Session, comprobante_id: int) -> Comprobante | None:
     return db.query(Comprobante).filter(Comprobante.id == comprobante_id).first()
 
-def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, mes: int = None, cliente_id: int = None, tipo: str = None, fecha_desde: date = None, fecha_hasta: date = None) -> dict:
+def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = None, localidad_id: int = None, cliente_id: int = None, tipo: str = None, fecha_desde: date = None, fecha_hasta: date = None, estado: str = None) -> dict:
     query = db.query(Comprobante)
     
     if search:
@@ -80,9 +80,8 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
                 Comprobante.localidad_destinatario_id == localidad_id
             )
         )
-    if mes:
-        query = query.filter(extract('month', Comprobante.fecha_emision) == mes)
-
+    if estado:
+        query = query.filter(Comprobante.estado == estado)
     if fecha_desde:
         query = query.filter(Comprobante.fecha_emision >= fecha_desde)
     if fecha_hasta:

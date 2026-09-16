@@ -3,14 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as XLSX from 'xlsx';
 
 import { comprobantesService } from '../../../api/comprobantesService';
+import { clientesServices } from '../../../api/clientesServices';
+import { localidadService } from '../../../api/localidadService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { generarPdfLocal } from '../../../utils/pdfGenerator';
+import { exportarAExcel } from '../../../utils/excelGenerator';
 
 export default function ComprobantesList() {
   const navigate = useNavigate();
@@ -22,8 +24,20 @@ export default function ComprobantesList() {
   const [downloading, setDownloading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtros, setFiltros] = useState({ tipo: "", mes: "", fecha_desde: "", fecha_hasta: "" });
+  const [filtros, setFiltros] = useState({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
   const [showFilters, setShowFilters] = useState(false);
+
+  const { data: clientesData } = useQuery({
+    queryKey: ['clientes-select'],
+    queryFn: () => clientesServices.getAll(1, 1000),
+  });
+  const clientesSelect = clientesData?.items || [];
+
+  const { data: localidadesData } = useQuery({
+    queryKey: ['localidades-select'],
+    queryFn: () => localidadService.getAll(1, 1000),
+  });
+  const localidadesSelect = localidadesData?.items || [];
 
   const { data, isLoading } = useQuery({
     queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros],
@@ -114,31 +128,27 @@ export default function ComprobantesList() {
       const data = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
       const comprobantesExport = data.items || [];
 
-      if (comprobantesExport.length === 0) {
-        toast.warning("No hay datos para exportar con estos filtros.");
-        return;
-      }
+      const datosFormateados = comprobantesExport.map(comp => {
+        const clienteEncontrado = clientesSelect.find(c => c.id === comp.cliente_remitente_id);
+        const nombreRemitente = clienteEncontrado ? clienteEncontrado.razon_social : `ID: ${comp.cliente_remitente_id}`;
 
-      const datosFormateados = comprobantesExport.map(comp => ({
-        'Fecha Emisión': formatDate(comp.fecha_emision),
-        'Tipo': comp.tipo_comprobante || comp.tipo,
-        'Número': comp.numero_comprobante,
-        'Remitente': comp.cliente?.razon_social || '-',
-        'Destinatario': comp.nombre_destinatario,
-        'Bultos': comp.cantidad_bultos,
-        'Flete a Cobrar ($)': comp.importe_flete_cobro,
-        'Estado': comp.estado
-      }));
+        return {
+          'Fecha Emisión': formatDate(comp.fecha_emision),
+          'Tipo': comp.tipo_comprobante || comp.tipo,
+          'Número': comp.numero_comprobante,
+          'Remitente': nombreRemitente,
+          'Destinatario': comp.nombre_destinatario,
+          'Bultos': comp.cantidad_bultos,
+          'Flete a Cobrar ($)': comp.importe_flete_cobro,
+          'Estado': comp.estado
+        };
+      });
 
-      const hoja = XLSX.utils.json_to_sheet(datosFormateados);
-      const libro = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(libro, hoja, "Comprobantes");
-      
-      XLSX.writeFile(libro, `Reporte_Comprobantes_${new Date().getTime()}.xlsx`);
-      toast.success("Excel descargado correctamente");
+      exportarAExcel(datosFormateados, 'Reporte_Comprobantes', 'Comprobantes');
+
     } catch (error) {
-      console.error("Error exportando a Excel", error);
-      toast.error("Ocurrió un error al generar el Excel.");
+      console.error("Error al preparar datos para Excel", error);
+      toast.error("Ocurrió un error al buscar los datos.");
     } finally {
       setIsExporting(false);
     }
@@ -227,36 +237,60 @@ export default function ComprobantesList() {
 
         {showFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
-            <select 
-              name="tipo" 
-              value={filtros.tipo} 
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
-            >
-              <option value="">Todos los Tipos</option>
-              <option value="Comprobante de Envío">Envío</option>
-              <option value="Remito">Remito</option>
-            </select>
-            <select 
-              name="mes" 
-              value={filtros.mes} 
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
-            >
-              <option value="">Cualquier Mes</option>
-              <option value="1">Enero</option>
-              <option value="2">Febrero</option>
-              <option value="3">Marzo</option>
-              <option value="4">Abril</option>
-              <option value="5">Mayo</option>
-              <option value="6">Junio</option>
-              <option value="7">Julio</option>
-              <option value="8">Agosto</option>
-              <option value="9">Septiembre</option>
-              <option value="10">Octubre</option>
-              <option value="11">Noviembre</option>
-              <option value="12">Diciembre</option>
-            </select>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Tipo de Comprobante</label>
+              <select 
+                name="tipo" 
+                value={filtros.tipo} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Tipos</option>
+                <option value="Comprobante de Envío">Envío</option>
+                <option value="Remito">Remito</option>
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente (Remitente)</label>
+              <select 
+                name="cliente_id" 
+                value={filtros.cliente_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Clientes</option>
+                {clientesSelect.map(c => (
+                  <option key={c.id} value={c.id}>{c.razon_social}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Localidad (Origen/Destino)</label>
+              <select 
+                name="localidad_id" 
+                value={filtros.localidad_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todas las Localidades</option>
+                {localidadesSelect.map(l => (
+                  <option key={l.id} value={l.id}>{l.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Estado</label>
+              <select 
+                name="estado" 
+                value={filtros.estado} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Estados</option>
+                <option value="Emitido">Emitido / Válido</option>
+                <option value="Anulado">Anulado</option>
+              </select>
+            </div>
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
               <input 

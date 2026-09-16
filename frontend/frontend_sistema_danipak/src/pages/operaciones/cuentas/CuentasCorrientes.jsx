@@ -12,6 +12,7 @@ export default function CuentasCorrientes() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const limit = 10;
+  const [filtroSaldo, setFiltroSaldo] = useState('Todos');
 
   const { data, isLoading } = useQuery({
     queryKey: ['cuentas-corrientes'],
@@ -22,9 +23,16 @@ export default function CuentasCorrientes() {
   const totalRegistros = data?.totalRegistros || cuentas.length;
 
   // Filtrado local rápido
-  const cuentasFiltradas = cuentas.filter(c => 
-    c.razon_social?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const cuentasFiltradas = cuentas.filter(c => {
+    const matchSearch = c.razon_social?.toLowerCase().includes(searchTerm.toLowerCase());
+    let matchSaldo = true;
+    
+    if (filtroSaldo === 'Deudores') matchSaldo = c.saldo_total > 0;
+    if (filtroSaldo === 'A favor') matchSaldo = c.saldo_total < 0;
+    if (filtroSaldo === 'Cero') matchSaldo = c.saldo_total === 0;
+    
+    return matchSearch && matchSaldo;
+  });
 
   const columnas = [
     { key: 'razon_social', label: 'Cliente' },
@@ -59,15 +67,28 @@ export default function CuentasCorrientes() {
       </div>
 
       <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <input 
-            type="text"
-            placeholder="Buscar por razón social..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary text-sm"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+            <input 
+              type="text"
+              placeholder="Buscar por razón social..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary text-sm"
+            />
+          </div>
+          
+          <select 
+            value={filtroSaldo} 
+            onChange={(e) => setFiltroSaldo(e.target.value)}
+            className="px-3 py-2 rounded-md border border-input bg-background text-sm focus:ring-2 focus:ring-primary sm:w-auto w-full"
+          >
+            <option value="Todos">Todos los saldos</option>
+            <option value="Deudores">Solo Deudores (Deben)</option>
+            <option value="A favor">Saldos A Favor</option>
+            <option value="Cero">Saldos en Cero</option>
+          </select>
         </div>
       </div>
 

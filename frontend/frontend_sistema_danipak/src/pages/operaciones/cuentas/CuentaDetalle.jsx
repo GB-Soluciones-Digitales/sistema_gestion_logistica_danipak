@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight, Filter, Sheet } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -14,11 +14,16 @@ import Modal from '../../../components/ui/Modal';
 import Input from '../../../components/ui/Input';
 
 import { generarReciboPdf } from '../../../utils/pdfReciboPago';
+import { exportarAExcel } from '../../../utils/excelGenerator';
 
 export default function CuentaDetalle() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const [filtros, setFiltros] = useState({ tipo_movimiento: "", fecha_desde: "", fecha_hasta: "" });
+  const [showFilters, setShowFilters] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Paginación
   const [page, setPage] = useState(1);
@@ -50,8 +55,8 @@ export default function CuentaDetalle() {
   });
 
   const { data: movimientosData, isLoading: loadingMovimientos } = useQuery({
-    queryKey: ['cuenta-movimientos', id, page, limit],
-    queryFn: () => movimientosService.getAllByCliente(id, page, limit),
+    queryKey: ['cuenta-movimientos', id, page, limit, filtros],
+    queryFn: () => movimientosService.getAllByCliente(id, page, limit, null, filtros),
   });
 
   const movimientos = movimientosData?.items || [];
@@ -111,6 +116,36 @@ export default function CuentaDetalle() {
       toast.error(err.response?.data?.detail || "Error al registrar el pago");
     }
   });
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({ ...prev, [name]: value }));
+    setPage(1);
+  };
+
+  const handleExportarExcel = async () => {
+    setIsExporting(true);
+    toast.info("Generando historial en Excel...");
+    try {
+      const data = await movimientosService.getAllByCliente(id, 1, 10000, null, filtros);
+      const movimientosExport = data.items || [];
+
+      const datosFormateados = movimientosExport.map(mov => ({
+        'Fecha': new Date(mov.fecha_movimiento).toLocaleDateString('es-AR'),
+        'Tipo': mov.tipo_movimiento,
+        'Importe ($)': mov.tipo_movimiento === 'Factura' ? mov.importe : -mov.importe,
+        'Estado': mov.anulado ? 'Anulado' : 'Válido'
+      }));
+
+      const nombreLimpio = resumen.razon_social.replace(/\s+/g, '_');
+      exportarAExcel(datosFormateados, `Historial_${nombreLimpio}`, 'Movimientos');
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al generar Excel.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleSubmitFactura = (e) => {
     e.preventDefault();
@@ -190,6 +225,63 @@ export default function CuentaDetalle() {
           </h3>
         </div>
       </div>
+
+      <div className="flex justify-end gap-2">
+        <Button 
+          variant="outline"
+          onClick={handleExportarExcel}
+          disabled={isExporting || loadingMovimientos}
+          className="text-green-700 border-green-200 hover:bg-green-50"
+        >
+          <Sheet size={18} className="mr-2" />
+          {isExporting ? 'Procesando...' : 'Excel'}
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          <Filter size={18} className="mr-2" />
+          Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
+        </Button>
+      </div>
+
+      {showFilters && (
+        <div className="bg-card p-4 rounded-lg border border-border shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4 animate-in slide-in-from-top-2">
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Tipo de Movimiento</label>
+            <select 
+              name="tipo_movimiento" 
+              value={filtros.tipo_movimiento} 
+              onChange={handleFilterChange}
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+            >
+              <option value="">Todos los movimientos</option>
+              <option value="Factura">Solo Facturas (Cargos)</option>
+              <option value="Pago">Solo Pagos (Abonos)</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
+            <input 
+              type="date" 
+              name="fecha_desde" 
+              value={filtros.fecha_desde} 
+              onChange={handleFilterChange}
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Hasta</label>
+            <input 
+              type="date" 
+              name="fecha_hasta" 
+              value={filtros.fecha_hasta} 
+              onChange={handleFilterChange}
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Tabla Historial */}
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">

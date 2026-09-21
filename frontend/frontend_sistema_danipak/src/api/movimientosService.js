@@ -6,10 +6,10 @@ export const movimientosService = {
         return response.data;
     },
 
-    getAllByCliente: async (clienteId, page = 1, limit = 100, anulado = null) => {
+    getAllByCliente: async (clienteId, page = 1, limit = 100, anulado = null, filtros = {}) => {
         const skip = (page - 1) * limit;
-        const response = await api.get(`/api/movimientos/cliente/${clienteId}`, { 
-            params: { skip, limit, anulado } 
+        const response = await api.get(`/api/movimientos/cliente/${clienteId}`, {
+            params: { skip, limit, anulado, ...filtros } 
         });
         return response.data;
     },

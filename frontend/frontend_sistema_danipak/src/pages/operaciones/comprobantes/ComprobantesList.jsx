@@ -1,51 +1,64 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { comprobantesService } from '../../../api/comprobantesService';
+import { clientesServices } from '../../../api/clientesServices';
+import { localidadService } from '../../../api/localidadService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
 import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { generarPdfLocal } from '../../../utils/pdfGenerator';
+import { exportarAExcel } from '../../../utils/excelGenerator';
 
 export default function ComprobantesList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   
-  const [comprobantes, setComprobantes] = useState([]);
-  const [totalRecords, setTotalRecords] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
   const [downloading, setDownloading] = useState(false);
-
+  const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtros, setFiltros] = useState({
-    tipo: "",
-    mes: "",
-  });
+  const [filtros, setFiltros] = useState({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
   const [showFilters, setShowFilters] = useState(false);
 
-  const fetchComprobantes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await comprobantesService.getAll(currentPage, limit, searchTerm, filtros);
-      setComprobantes(data.items || []);
-      setTotalRecords(data.total || 0);
-    } catch (error) {
-      toast.error("Error al cargar los comprobantes");
-      console.error("Error al cargar los comprobantes", error)
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, limit, searchTerm, filtros]);
+  const { data: clientesData } = useQuery({
+    queryKey: ['clientes-select'],
+    queryFn: () => clientesServices.getAll(1, 1000),
+  });
+  const clientesSelect = clientesData?.items || [];
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchComprobantes();
-  }, [fetchComprobantes]);
+  const { data: localidadesData } = useQuery({
+    queryKey: ['localidades-select'],
+    queryFn: () => localidadService.getAll(1, 1000),
+  });
+  const localidadesSelect = localidadesData?.items || [];
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros],
+    queryFn: () => comprobantesService.getAll(currentPage, limit, searchTerm, filtros),
+  });
+
+  const comprobantes = data?.items || [];
+  const totalRecords = data?.total || 0;
+  const totalPages = Math.ceil(totalRecords / limit);
+
+  const anularMutation = useMutation({
+    mutationFn: (id) => comprobantesService.updateEstado(id, { estado: "Anulado" }),
+    onSuccess: () => {
+      toast.success("Comprobante anulado");
+      queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
+    },
+    onError: (error) => {
+      toast.error("Error al anular");
+      console.error("Error al anular", error);
+    }
+  });
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -102,23 +115,50 @@ export default function ComprobantesList() {
     setComprobanteAAnular(id);
   };
 
-  const confirmarAnulacion = async () => {
+  const confirmarAnulacion = () => {
     const id = comprobanteAAnular;
     setComprobanteAAnular(null);
+    anularMutation.mutate(id);
+  };
+
+  const handleExportarExcel = async () => {
+    setIsExporting(true);
+    toast.info("Generando archivo Excel...");
     try {
-      await comprobantesService.updateEstado(id, { estado: "Anulado" });
-      toast.success("Comprobante anulado");
-      fetchComprobantes();
+      const data = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
+      const comprobantesExport = data.items || [];
+
+      const datosFormateados = comprobantesExport.map(comp => {
+        const clienteEncontrado = clientesSelect.find(c => c.id === comp.cliente_remitente_id);
+        const nombreRemitente = clienteEncontrado ? clienteEncontrado.razon_social : `ID: ${comp.cliente_remitente_id}`;
+
+        return {
+          'Fecha Emisión': formatDate(comp.fecha_emision),
+          'Tipo': comp.tipo_comprobante || comp.tipo,
+          'Número': comp.numero_comprobante,
+          'Remitente': nombreRemitente,
+          'Destinatario': comp.nombre_destinatario,
+          'Bultos': comp.cantidad_bultos,
+          'Flete a Cobrar ($)': comp.importe_flete_cobro,
+          'Estado': comp.estado
+        };
+      });
+
+      exportarAExcel(datosFormateados, 'Reporte_Comprobantes', 'Comprobantes');
+
     } catch (error) {
-      toast.error("Error al anular");
-      console.error("Error al anular", error)
+      console.error("Error al preparar datos para Excel", error);
+      toast.error("Ocurrió un error al buscar los datos.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
   const columnas = [
-    { key: 'fecha_emision', label: 'Fecha', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
+    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo_comprobante || '-' },
     { key: 'numero_comprobante', label: 'Número', render: (fila) => <span className="font-medium">{fila.numero_comprobante}</span> },
-    { key: 'nombre_destinatario', label: 'Destinatario' },
+    { key: 'nombre_destinatario', label: 'Destinatario', render: (fila) => fila.nombre_destinatario || '-' },
     { key: 'importe_flete_cobro', label: 'Flete Cobrar', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
     { key: 'estado', label: 'Estado',
       render: (fila) => (
@@ -139,15 +179,13 @@ export default function ComprobantesList() {
           <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">
             <Pencil size={16} className="text-amber-600" />
           </Button>
-          <Button variant="outline" onClick={() => handleAnular(fila.id)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Anular">
+          <Button variant="outline" onClick={() => handleAnular(fila.id)} disabled={fila.estado === 'Anulado' || anularMutation.isPending} className="px-2 py-1 h-8" title="Anular">
             <Ban size={16} className="text-red-600" />
           </Button>
         </div>
       )
     }
   ];
-
-  const totalPages = Math.ceil(totalRecords / limit);
 
   return (
     <div className="space-y-6 pb-10">
@@ -175,80 +213,126 @@ export default function ComprobantesList() {
             />
           </div>
 
-          <Button 
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-            className="w-full sm:w-auto"
-          >
-            <Filter size={18} className="mr-2" />
-            Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              variant="outline"
+              onClick={handleExportarExcel}
+              disabled={isExporting || isLoading}
+              className="w-full sm:w-auto text-green-700 border-green-200 hover:bg-green-50"
+            >
+              <Sheet size={18} className="mr-2" />
+              {isExporting ? 'Procesando...' : 'Excel'}
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full sm:w-auto"
+            >
+              <Filter size={18} className="mr-2" />
+              Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
+            </Button>
+          </div>
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
-            <select 
-              name="tipo" 
-              value={filtros.tipo} 
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Todos los Tipos</option>
-              <option value="Comprobante de Envío">Comprobante de Envío</option>
-              <option value="Remito">Remito</option>
-            </select>
-            <select 
-              name="mes" 
-              value={filtros.mes} 
-              onChange={handleFilterChange}
-              className="px-3 py-2 rounded-md border border-input bg-background focus:ring-2 focus:ring-ring"
-            >
-              <option value="">Cualquier Mes</option>
-              <option value="1">Enero</option>
-              <option value="2">Febrero</option>
-              <option value="3">Marzo</option>
-              <option value="4">Abril</option>
-              <option value="5">Mayo</option>
-              <option value="6">Junio</option>
-              <option value="7">Julio</option>
-              <option value="8">Agosto</option>
-              <option value="9">Septiembre</option>
-              <option value="10">Octubre</option>
-              <option value="11">Noviembre</option>
-              <option value="12">Diciembre</option>
-            </select>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Tipo de Comprobante</label>
+              <select 
+                name="tipo" 
+                value={filtros.tipo} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Tipos</option>
+                <option value="Comprobante de Envío">Envío</option>
+                <option value="Remito">Remito</option>
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente (Remitente)</label>
+              <select 
+                name="cliente_id" 
+                value={filtros.cliente_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Clientes</option>
+                {clientesSelect.map(c => (
+                  <option key={c.id} value={c.id}>{c.razon_social}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Localidad (Origen/Destino)</label>
+              <select 
+                name="localidad_id" 
+                value={filtros.localidad_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todas las Localidades</option>
+                {localidadesSelect.map(l => (
+                  <option key={l.id} value={l.id}>{l.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Estado</label>
+              <select 
+                name="estado" 
+                value={filtros.estado} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Estados</option>
+                <option value="Emitido">Emitido / Válido</option>
+                <option value="Anulado">Anulado</option>
+              </select>
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
+              <input 
+                type="date" 
+                name="fecha_desde" 
+                value={filtros.fecha_desde} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Hasta</label>
+              <input 
+                type="date" 
+                name="fecha_hasta" 
+                value={filtros.fecha_hasta} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
           </div>
         )}
       </div>
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading && comprobantes.length === 0 ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <DataTable columns={columnas} data={comprobantes} />
         )}
         
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando página {currentPage} de {totalPages}
+              Mostrando página {comprobantes.length} de {totalRecords} comprobantes
             </span>
             <div className="flex gap-2 items-center">
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || isLoading} className="px-2 py-1 h-8">
                 <ChevronLeft size={18} />
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-2 py-1 h-8"
-              >
+              <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 h-8">
                 <ChevronRight size={18} />
               </Button>
             </div>

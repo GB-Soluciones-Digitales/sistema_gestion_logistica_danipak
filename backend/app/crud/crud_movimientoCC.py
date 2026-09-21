@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import date, datetime
 from fastapi import APIRouter
 
 from app.models.MovimientoCC import MovimientoCC
@@ -13,11 +13,17 @@ from app.models.Cliente import Cliente
 def get_movimiento_by_id(db: Session, movimiento_id: int) -> MovimientoCC | None:
     return db.query(MovimientoCC).filter(MovimientoCC.id == movimiento_id).first()
 
-def get_movimientos(db: Session, skip: int = 0, limit: int = 100, cliente_id: int = None, anulado: bool = None) -> dict:
+def get_movimientos(db: Session, skip: int = 0, limit: int = 100, cliente_id: int = None, anulado: bool = None, fecha_desde: date = None, fecha_hasta: date = None, tipo_movimiento: str = None) -> dict:
     query = db.query(MovimientoCC).filter(MovimientoCC.cliente_id == cliente_id)
     
     if anulado is not None:
         query = query.filter(MovimientoCC.anulado == anulado)
+    if tipo_movimiento:
+        query = query.filter(MovimientoCC.tipo_movimiento == tipo_movimiento)
+    if fecha_desde:
+        query = query.filter(MovimientoCC.fecha_movimiento >= fecha_desde)
+    if fecha_hasta:
+        query = query.filter(MovimientoCC.fecha_movimiento <= fecha_hasta)
         
     total = query.count()
     items = query.order_by(MovimientoCC.fecha_movimiento.desc()).offset(skip).limit(limit).all()

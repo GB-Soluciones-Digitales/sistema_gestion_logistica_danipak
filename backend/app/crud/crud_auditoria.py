@@ -32,6 +32,3 @@ def create_auditoria_log(db: Session, auditoria: AuditoriaCreate) -> Auditoria:
     db.add(db_auditoria)
     db.flush()
     return db_auditoria
-
-
-

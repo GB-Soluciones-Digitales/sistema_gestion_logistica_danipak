@@ -15,8 +15,7 @@ import ClienteForm from './pages/operaciones/clientes/ClienteForm';
 import CuentasCorrientes from './pages/operaciones/cuentas/CuentasCorrientes';
 import CuentaDetalle from './pages/operaciones/cuentas/CuentaDetalle';
 import Localidades from "./pages/operaciones/Localidades";
-import Clientes from "./pages/operaciones/Clientes";
-import Auditoria from './pages/operaciones/Auditoria';
+import Auditoria from './pages/control/Auditoria';
 
 export default function App() {
   useEffect(() => {
@@ -68,7 +67,6 @@ export default function App() {
             <Route path="/cuentas-corrientes" element={<CuentasCorrientes />} />
             <Route path="/cuentas-corrientes/:id" element={<CuentaDetalle />} />
             <Route path="/localidades" element={<Localidades />} />
-            <Route path="/clientes" element={<Clientes />} />
             <Route path="/auditoria" element={<Auditoria />} />
           </Route>
 

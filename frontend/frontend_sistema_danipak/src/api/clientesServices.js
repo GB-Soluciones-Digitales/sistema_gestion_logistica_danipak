@@ -13,7 +13,7 @@ export const clientesServices = {
             
             if (search) {
                 const searchLower = search.toLowerCase();
-                 offlineItems = offlineItems.filter(item => 
+                offlineItems = offlineItems.filter(item => 
                     item.razon_social?.toLowerCase().includes(searchLower) ||
                     item.cuit_dni?.toLowerCase().includes(searchLower) ||
                     item.nombre_fantasia?.toLowerCase().includes(searchLower)

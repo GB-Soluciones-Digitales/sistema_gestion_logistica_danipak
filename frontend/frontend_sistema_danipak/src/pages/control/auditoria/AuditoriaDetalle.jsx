@@ -47,17 +47,17 @@ export default function AuditoriaDetalleModal({ item, onClose }) {
                                     mode === 'diff' ? (
                                         <tr key={r.campo} className={r.changed ? 'bg-amber-50' : ''}>
                                             <td className="px-3 py-2 font-medium">{humanize(r.campo)}</td>
-                                            <td className={`px-3 py-2 break-words ${r.changed ? 'text-red-700 line-through' : 'text-muted-foreground'}`}>
+                                            <td className={`px-3 py-2 wrap-break-word ${r.changed ? 'text-red-700 line-through' : 'text-muted-foreground'}`}>
                                                 {formatValue(r.antes)}
                                             </td>
-                                            <td className={`px-3 py-2 break-words ${r.changed ? 'text-green-700 font-medium' : 'text-muted-foreground'}`}>
+                                            <td className={`px-3 py-2 wrap-break-word ${r.changed ? 'text-green-700 font-medium' : 'text-muted-foreground'}`}>
                                                 {formatValue(r.despues)}
                                             </td>
                                         </tr>
                                     ) : (
                                         <tr key={r.campo}>
                                             <td className="px-3 py-2 font-medium w-1/3">{humanize(r.campo)}</td>
-                                            <td className="px-3 py-2 break-words">{formatValue(r.valor)}</td>
+                                            <td className="px-3 py-2 wrap-break-word">{formatValue(r.valor)}</td>
                                         </tr>
                                     )
                                 )}

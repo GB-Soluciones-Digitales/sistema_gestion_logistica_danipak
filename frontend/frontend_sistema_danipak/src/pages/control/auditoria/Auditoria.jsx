@@ -1,18 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, X, Eye } from 'lucide-react';
-import { toast } from "sonner";
+import { useQuery } from '@tanstack/react-query';
+
 import { auditoriaService } from '../../../api/auditoriaServices';
-import { usuarioService } from '../../api/usuarioServices';
+import { usuarioService } from '../../../api/usuariosService';
 import Button from '../../../components/ui/Button';
 import DataTable from '../../../components/ui/DataTable';
 import AuditoriaDetalleModal, { AccionBadge } from './AuditoriaDetalle';
 import { resumenDetalles, formatFecha } from './AuditoriaDetalleUtils';
 
 export default function Auditoria() {
-    const [auditoria, setAuditoria] = useState([]);
-    const [totalRegistros, setTotalRegistros] = useState(0);
-    const [loading, setLoading] = useState(true);
-
     const [page, setPage] = useState(1);
     const limit = 10;
 
@@ -21,7 +18,6 @@ export default function Auditoria() {
     const [usuarioId, setUsuarioId] = useState('');
     const [fechaDesde, setFechaDesde] = useState('');
     const [fechaHasta, setFechaHasta] = useState('');
-    const [usuarios, setUsuarios] = useState([]);
 
     const [detalleSeleccionado, setDetalleSeleccionado] = useState(null);
 
@@ -33,41 +29,25 @@ export default function Auditoria() {
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
-    useEffect(() => {
-        const loadUsuarios = async () => {
-            try {
-                const data = await usuarioService.getAll();
-                setUsuarios(Array.isArray(data) ? data : data.items || []);
-            } catch (err) {
-                console.error("Error al cargar usuarios", err);
-            }
-        };
-        loadUsuarios();
-    }, []);
+    const { data: usuariosData } = useQuery({
+        queryKey: ['usuarios'],
+        queryFn: () => usuarioService.getAll(),
+    });
+    const usuarios = Array.isArray(usuariosData) ? usuariosData : (usuariosData?.items || []);
 
-    const fetchAuditorias = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await auditoriaService.getAll(page, limit, {
-                search,
-                usuario_id: usuarioId,
-                fecha_desde: fechaDesde,
-                fecha_hasta: fechaHasta,
-            });
-            setAuditoria(data.items || []);
-            setTotalRegistros(data.total);
-        } catch (err) {
-            toast.error("Error al cargar las auditorias");
-            console.error("Error al cargar Auditorias", err);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, limit, search, usuarioId, fechaDesde, fechaHasta]);
+    const { data: auditoriaData, isLoading } = useQuery({
+        queryKey: ['auditoria', page, limit, search, usuarioId, fechaDesde, fechaHasta],
+        queryFn: () => auditoriaService.getAll(page, limit, {
+            search,
+            usuario_id: usuarioId,
+            fecha_desde: fechaDesde,
+            fecha_hasta: fechaHasta,
+        }),
+    });
 
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        fetchAuditorias();
-    }, [fetchAuditorias]);
+    const auditoria = auditoriaData?.items || [];
+    const totalRegistros = auditoriaData?.total || 0;
+    const totalPages = Math.ceil(totalRegistros / limit);
 
     const handleFilterChange = (setter) => (e) => {
         setter(e.target.value);
@@ -121,14 +101,13 @@ export default function Auditoria() {
         },
     ];
 
-    const totalPages = Math.ceil(totalRegistros / limit);
     const inputClass = "border border-input rounded-md px-3 py-2 bg-background text-sm text-foreground focus:outline-none";
 
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-display font-bold text-foreground">Auditorias</h1>
-                <p className="text-muted-foreground text-sm mt-1">Historial de Auditorias Realizadas.</p>
+                <h1 className="text-2xl font-display font-bold text-foreground">Auditorías</h1>
+                <p className="text-muted-foreground text-sm mt-1">Historial de Auditorías Realizadas.</p>
             </div>
 
             <div className="flex flex-wrap items-end gap-3">
@@ -185,7 +164,7 @@ export default function Auditoria() {
                 )}
             </div>
 
-            {loading && auditoria.length === 0 ? (
+            {isLoading ? (
                 <div className="p-8 text-center text-muted-foreground">Buscando...</div>
             ) : (
                 <DataTable columns={columnas} data={auditoria} />
@@ -193,13 +172,13 @@ export default function Auditoria() {
 
             <div className="flex items-center justify-between py-2">
                 <span className="text-sm text-muted-foreground">
-                    Mostrando {auditoria.length} de {totalRegistros} Auditorias
+                    Mostrando {auditoria.length} de {totalRegistros} Auditorías
                 </span>
                 <div className="flex items-center gap-2">
                     <Button
                         variant="outline"
                         className="px-2 py-1"
-                        disabled={page === 1 || loading}
+                        disabled={page === 1 || isLoading}
                         onClick={() => setPage(p => p - 1)}
                     >
                         <ChevronLeft size={18} />
@@ -208,7 +187,7 @@ export default function Auditoria() {
                     <Button
                         variant="outline"
                         className="px-2 py-1"
-                        disabled={page >= totalPages || totalPages === 0 || loading}
+                        disabled={page >= totalPages || totalPages === 0 || isLoading}
                         onClick={() => setPage(p => p + 1)}
                     >
                         <ChevronRight size={18} />

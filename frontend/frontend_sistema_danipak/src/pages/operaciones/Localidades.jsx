@@ -1,26 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
-import { localidadService } from '../../api/localidadService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { localidadService } from '../../api/localidadService';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import DataTable from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
 
 export default function Localidades() {
-    const [localidades, setLocalidades] = useState([]); // Aca guardamos las localidades 
-    const [totalRegistros, setTotalRegistros] = useState(0);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     
-    // Controles de Paginacion y busqueda
     const [page, setPage] = useState(1);
-    const limit = 10; // Cantidad de filas por pagina
+    const limit = 10;
     const [search, setSearch] = useState('');
-    const [searchTerm, setSearchTerm] = useState(''); // Lo que se escribe antes de enviar al back
+    const [searchTerm, setSearchTerm] = useState('');
 
-    const [isModalOpen, setIsModalOpen] = useState(false); // Controlamos la modal
-    const [modoEdicion, setModoEdicion] = useState(false); // Para saber si estamos creando o editando
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modoEdicion, setModoEdicion] = useState(false);
     const [idSeleccionado, setIdSeleccionado] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -29,35 +27,50 @@ export default function Localidades() {
         estado: true
     });
 
-    // Genera un efecto retraso, espera medio segundo después de que el usuario deja de escribir para buscar
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             setSearch(searchTerm);
-            setPage(1); // Si busco algo nuevo, vuelvo a la pagina 1
+            setPage(1);
         }, 500);
             return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
-    // Esta es una funcion, llama al backend para que busque todas las localidades
-    const fetchLocalidades = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await localidadService.getAll(page, limit, search);
-            setLocalidades(data.items);
-            setTotalRegistros(data.total);
-        } catch (err) {
-            toast.error('Error al cargar las localidades')
-            console.error('Error al cargar localidades', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [page, search, limit]);
+    const { data, isLoading } = useQuery({
+        queryKey: ['localidades', page, limit, search],
+        queryFn: () => localidadService.getAll(page, limit, search),
+    });
 
-    // Esto hace que se ejecute una sola vez al entrar
-    useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        fetchLocalidades();
-    }, [fetchLocalidades]);
+    const localidades = data?.items || [];
+    const totalRegistros = data?.total || 0;
+    const totalPages = Math.ceil(totalRegistros / limit);
+
+    const createMutation = useMutation({
+        mutationFn: (nuevaLocalidad) => localidadService.createLocalidad(nuevaLocalidad),
+        onSuccess: () => {
+            toast.success("Localidad creada con éxito");
+            setIsModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['localidades'] });
+            queryClient.invalidateQueries({ queryKey: ['localidades-select'] });
+        },
+        onError: (err) => {
+            toast.error("Error al guardar la localidad. Revisá los datos.");
+            console.error('Error al guardar', err);
+        }
+    });
+
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }) => localidadService.updateLocalidad(id, data),
+        onSuccess: () => {
+            toast.success("Localidad actualizada correctamente");
+            setIsModalOpen(false);
+            queryClient.invalidateQueries({ queryKey: ['localidades'] });
+            queryClient.invalidateQueries({ queryKey: ['localidades-select'] });
+        },
+        onError: (err) => {
+            toast.error("Error al guardar la localidad. Revisá los datos.");
+            console.error('Error al guardar', err);
+        }
+    });
 
     const abrirModalCrear = () => {
         setFormData({ nombre: '', codigo_postal: '', estado: true });
@@ -77,26 +90,15 @@ export default function Localidades() {
         setIsModalOpen(true);
     };
 
-    // Esta funcion se dispara cuando apretamos guardar
-    const handleSubmit = async (e) => {
-        e.preventDefault(); // Evita que la página se recargue
-        try {
-            if (modoEdicion) {
-                await localidadService.updateLocalidad(idSeleccionado, formData);
-                toast.success("Localidad actualizada correctamente");
-            } else {
-                await localidadService.createLocalidad(formData);
-                toast.success("Localidad creada con éxito");
-            }
-            setIsModalOpen(false);
-            fetchLocalidades();
-        } catch (err) {
-            toast.error("Error al guardar la localidad. Revisá los datos.");
-            console.error('Error al guardar', err)
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        if (modoEdicion) {
+            updateMutation.mutate({ id: idSeleccionado, data: formData });
+        } else {
+            createMutation.mutate(formData);
         }
     };
 
-    // Aca pasamos los columnas a escribir
     const columnas = [
         { key: 'nombre', label: 'Localidad' },
         { key: 'codigo_postal', label: 'CP' },
@@ -115,8 +117,6 @@ export default function Localidades() {
           )
         }
     ];
-
-    const totalPages = Math.ceil(totalRegistros / limit);
 
   return (
     <div className="space-y-6 pb-10">
@@ -147,13 +147,13 @@ export default function Localidades() {
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">
         
-        {loading && localidades.length === 0 ? (
+        {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
           <DataTable columns={columnas} data={localidades} />
         )}
 
-        {!loading && totalPages > 0 && (
+        {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
               Mostrando {localidades.length} de {totalRegistros} localidades
@@ -162,7 +162,7 @@ export default function Localidades() {
               <Button 
                 variant="outline" 
                 className="px-2 py-1 h-8"
-                disabled={page === 1 || loading}
+                disabled={page === 1 || isLoading}
                 onClick={() => setPage(p => p - 1)}
               >
                 <ChevronLeft size={18} />
@@ -171,7 +171,7 @@ export default function Localidades() {
               <Button 
                 variant="outline" 
                 className="px-2 py-1"
-                disabled={page === totalPages}
+                disabled={page === totalPages || isLoading}
                 onClick={() => setPage(p => p + 1)}
               >
                 <ChevronRight size={18} />
@@ -209,13 +209,15 @@ export default function Localidades() {
                 checked={formData.estado}
                 onChange={(e) => setFormData({ ...formData, estado: e.target.checked })}
               />
-              <span className="text-sm font-medium text-foreground">Localidad Activa (Disponible para envíos)</span>
+              <span className="text-sm font-medium text-foreground">Localidad Activa</span>
             </label>
           )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
             <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Cancelar</Button>
-            <Button type="submit">Guardar</Button>
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              {createMutation.isPending || updateMutation.isPending ? 'Guardando...' : 'Guardar'}
+            </Button>
           </div>
         </form>
       </Modal>

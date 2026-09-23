@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
+import { Search, Eye, ChevronLeft, ChevronRight, Sheet, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -36,6 +36,13 @@ export default function CuentasCorrientes() {
     
     return matchSearch && matchSaldo;
   });
+
+  const hayFiltros = searchTerm !== "" || filtroSaldo !== 'Todos';
+  
+  const limpiarFiltros = () => {
+    setSearchTerm("");
+    setFiltroSaldo("Todos");
+  };
 
   const handleExportarExcel = () => {
     setIsExporting(true);
@@ -126,6 +133,12 @@ export default function CuentasCorrientes() {
               <option value="A favor">Saldos A Favor</option>
               <option value="Cero">Saldos en Cero</option>
             </select>
+
+            {hayFiltros && (
+              <Button variant="outline" onClick={limpiarFiltros} className="w-full sm:w-auto text-red-600 border-red-200 hover:bg-red-50">
+                <X size={18} className="mr-2" /> Limpiar
+              </Button>
+            )}
           </div>
         </div>
       </div>

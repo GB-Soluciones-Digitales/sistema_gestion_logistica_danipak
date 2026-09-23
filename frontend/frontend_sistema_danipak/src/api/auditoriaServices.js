@@ -2,19 +2,22 @@ import api from "./axios";
 
 export const auditoriaService = {
 
-    createAuditoria: async (data) => {
-        const response = await api.post('/auditoria/', data)
-        return response.data
-    },
-
     getAll: async (page = 1, limit = 100, filtros = {}) => {
         const skip = (page - 1) * limit;
-        const response = await api.get('/auditoria/', { params: { skip, limit, ...filtros } });
+        const params = { skip, limit };
+
+        Object.entries(filtros).forEach(([key, value]) => {
+            if (value !== '' && value !== null && value !== undefined) {
+                params[key] = value;
+            }
+        });
+
+        const response = await api.get('/api/auditoria/', { params });
         return response.data;
     },
 
     getById: async (tabla, id) => {
-        const response = await api.get(`/auditoria/${tabla}/${id}`)
-        return response.data
-    }
-}
+        const response = await api.get(`/api/auditoria/${tabla}/${id}`);
+        return response.data;
+    },
+};

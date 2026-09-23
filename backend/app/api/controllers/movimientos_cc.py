@@ -22,9 +22,12 @@ def get_resumen_general(db: Session = Depends(get_db)):
 def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db)):
     return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
 
+from datetime import date
+from typing import Optional
+
 @router.get("/cliente/{cliente_id}", response_model=MovimientoCCPaginatedResponse)
-def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, anulado: Optional[bool] = None, db: Session = Depends(get_db)):
-    return crud_movimientoCC.get_movimientos(db=db, cliente_id=cliente_id, skip=skip, limit=limit, anulado=anulado)
+def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, anulado: Optional[bool] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, tipo_movimiento: Optional[str] = None, db: Session = Depends(get_db)):
+    return crud_movimientoCC.get_movimientos(db=db, cliente_id=cliente_id, skip=skip, limit=limit, anulado=anulado, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, tipo_movimiento=tipo_movimiento)
 
 @router.get("/{movimiento_id}", response_model=MovimientoCCResponse)
 def get_movimiento(movimiento_id: int, db: Session = Depends(get_db)):

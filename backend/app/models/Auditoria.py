@@ -10,7 +10,7 @@ class Auditoria(Base):
     accion = Column(String, nullable=False)
     tabla_afectada = Column(String, nullable=False)
     registro_id = Column(Integer, nullable=False)
-    detalles_cambio = Column(JSON, nullable=True) 
+    detalles_cambio = Column(JSON, nullable=True)
     fecha = Column(DateTime, nullable=False)
 
     usuario = relationship("Usuario", back_populates="auditoria")

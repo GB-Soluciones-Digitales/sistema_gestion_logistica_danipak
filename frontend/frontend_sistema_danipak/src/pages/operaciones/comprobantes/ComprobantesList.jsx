@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -68,6 +68,14 @@ export default function ComprobantesList() {
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFiltros(prev => ({ ...prev, [name]: value }));
+    setCurrentPage(1);
+  };
+
+  const hayFiltros = searchTerm !== "" || Object.values(filtros).some(v => v !== "");
+  
+  const limpiarFiltros = () => {
+    setSearchTerm("");
+    setFiltros({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
     setCurrentPage(1);
   };
 
@@ -232,6 +240,16 @@ export default function ComprobantesList() {
               <Filter size={18} className="mr-2" />
               Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
             </Button>
+            
+            {hayFiltros && (
+              <Button 
+                variant="outline" 
+                onClick={limpiarFiltros} 
+                className="w-full sm:w-auto text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <X size={18} className="mr-2" /> Limpiar
+              </Button>
+            )}
           </div>
         </div>
 

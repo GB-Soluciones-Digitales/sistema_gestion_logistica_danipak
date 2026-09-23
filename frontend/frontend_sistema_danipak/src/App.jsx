@@ -16,7 +16,6 @@ import ClienteForm from './pages/operaciones/clientes/ClienteForm';
 import CuentasCorrientes from './pages/operaciones/cuentas/CuentasCorrientes';
 import CuentaDetalle from './pages/operaciones/cuentas/CuentaDetalle';
 import Localidades from "./pages/operaciones/Localidades";
-import Auditoria from './pages/control/Auditoria';
 
 export default function App() {
   useEffect(() => {

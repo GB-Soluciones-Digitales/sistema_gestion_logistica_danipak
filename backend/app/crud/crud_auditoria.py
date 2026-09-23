@@ -1,21 +1,36 @@
+from datetime import date, datetime, time, timedelta
+from typing import Optional
+
+from sqlalchemy import or_, cast, String
 from sqlalchemy.orm import Session
 from sqlalchemy import func, Date
 
 from app.models.Auditoria import Auditoria
 from app.schemas.auditoria import AuditoriaCreate
 
-def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afectada: str = None, accion: str = None, usuario_id: int = None, fecha: str = None) -> dict:
+def get_auditoria_logs(db: Session, skip: int = 0, limit: int = 100, tabla_afectada: str = None, accion: str = None, usuario_id: int = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, search: Optional[str] = None) -> dict:
     query = db.query(Auditoria)
-    
+
     if tabla_afectada:
         query = query.filter(Auditoria.tabla_afectada == tabla_afectada)
     if accion:
         query = query.filter(Auditoria.accion == accion)
     if usuario_id:
         query = query.filter(Auditoria.usuario_id == usuario_id)
-    if fecha:
-        query = query.filter(func.cast(Auditoria.fecha, Date) == fecha)
-        
+    if fecha_desde:
+        query = query.filter(Auditoria.fecha >= datetime.combine(fecha_desde, time.min))
+    if fecha_hasta:
+        query = query.filter(
+            Auditoria.fecha < datetime.combine(fecha_hasta + timedelta(days=1), time.min)
+        )
+    if search:
+        term = f"%{search.strip()}%"
+        query = query.filter(or_(
+            Auditoria.tabla_afectada.ilike(term),
+            Auditoria.accion.ilike(term),
+            cast(Auditoria.detalles_cambio, String).ilike(term),
+        ))
+
     total = query.count()
     items = query.order_by(Auditoria.fecha.desc()).offset(skip).limit(limit).all()
     return {"total": total, "items": items}

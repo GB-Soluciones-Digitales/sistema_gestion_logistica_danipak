@@ -83,7 +83,6 @@ export default function Auditoria() {
     };
 
     const columnas = [
-        { key: "id", label: "Id" },
         { key: "fecha", label: "Fecha", render: (row) => formatFecha(row.fecha) },
         { key: "usuario_id", label: "Usuario", render: (row) => nombreUsuario(row.usuario_id) },
         { key: "accion", label: "Acción", render: (row) => (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight, Filter, Sheet } from 'lucide-react';
+import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight, Filter, Sheet, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -116,6 +116,13 @@ export default function CuentaDetalle() {
       toast.error(err.response?.data?.detail || "Error al registrar el pago");
     }
   });
+
+  const hayFiltros = Object.values(filtros).some(v => v !== "");
+  
+  const limpiarFiltros = () => {
+    setFiltros({ tipo_movimiento: "", fecha_desde: "", fecha_hasta: "" });
+    setPage(1);
+  };
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -243,6 +250,12 @@ export default function CuentaDetalle() {
           <Filter size={18} className="mr-2" />
           Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
         </Button>
+
+        {hayFiltros && (
+          <Button variant="outline" onClick={limpiarFiltros} className="text-red-600 border-red-200 hover:bg-red-50">
+            <X size={18} className="mr-2" /> Limpiar
+          </Button>
+        )}
       </div>
 
       {showFilters && (

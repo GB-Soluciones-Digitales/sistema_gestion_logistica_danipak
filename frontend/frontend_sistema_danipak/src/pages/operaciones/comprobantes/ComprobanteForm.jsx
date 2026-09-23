@@ -21,6 +21,7 @@ export default function ComprobanteForm() {
   const [clientes, setClientes] = useState([]);
   const [loadingData, setLoadingData] = useState(false);
   const [cargandoNumero, setCargandoNumero] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
   const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
@@ -35,6 +36,19 @@ export default function ComprobanteForm() {
     control,
     name: "tipo"
   });
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +86,12 @@ export default function ComprobanteForm() {
 
     const calcularProximoNumero = async () => {
       if (tipoSeleccionado === "Comprobante de Envío") {
+        if (!navigator.onLine) {
+          toast.info("Sin conexión: Ingrese el número correlativo manualmente.");
+          setValue("numero_comprobante", "");
+          return;
+        }
+
         setCargandoNumero(true);
         try {
           const res = await comprobantesService.getUltimoNumero(); 
@@ -122,13 +142,10 @@ export default function ComprobanteForm() {
         toast.success("Comprobante actualizado exitosamente");
         navigate('/comprobantes');
       } else {
-        // Creamos el comprobante y guardamos la respuesta
         const nuevoComprobante = await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
         
-        // Intentamos descargar y abrir el PDF automáticamente
         try {
-          // Asegurate de que tu backend devuelva el ID del comprobante creado en la respuesta
           const idCreado = nuevoComprobante.id; 
           
           if (idCreado) {
@@ -170,7 +187,6 @@ export default function ComprobanteForm() {
               toast.error("El navegador bloqueó la ventana emergente.");
             }
             
-            // Limpia la memoria después de unos segundos
             setTimeout(() => window.URL.revokeObjectURL(url), 10000);
           }
         } catch (pdfError) {
@@ -210,7 +226,11 @@ export default function ComprobanteForm() {
         
         {/* Datos Generales */}
         <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
-          <h2 className="text-lg font-semibold mb-4 border-b border-border pb-2">Datos Generales</h2>
+          <div className="flex justify-between items-center mb-4 border-b border-border pb-2">
+            <h2 className="text-lg font-semibold">Datos Generales</h2>
+            {isOffline && <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">Modo Offline</span>}
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">Tipo de Comprobante *</label>
@@ -230,12 +250,14 @@ export default function ComprobanteForm() {
                 label={<>Número {cargandoNumero && <Loader2 className="inline w-3 h-3 animate-spin text-primary" />} *</>}
                 error={errors.numero_comprobante?.message}
                 placeholder="Ej: 0001-00001234"
-                disabled={tipoSeleccionado === "Comprobante de Envío" || cargandoNumero}
+                disabled={cargandoNumero}
                 className="font-medium disabled:bg-secondary/50"
                 {...register("numero_comprobante", { required: "El número es obligatorio" })}
               />
               {tipoSeleccionado === "Comprobante de Envío" && (
-                <p className="text-[10px] text-muted-foreground mt-1">Número asignado automáticamente.</p>
+                <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+                  {isOffline ? 'Sin conexión: Ingrese el número manualmente.' : 'Sugerido automáticamente. Puede editarlo si difiere del talonario.'}
+                </p>
               )}
             </div>
             

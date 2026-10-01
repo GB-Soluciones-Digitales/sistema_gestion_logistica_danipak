@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Building2, Phone, MapPin, Mail, Save, Loader2 } from 'lucide-react';
 
-import { empresaService } from '../../services/empresaService';
+import { empresaService } from '../../api/empresaService';
 
 export default function Configuracion() {
   const queryClient = useQueryClient();

@@ -1,4 +1,5 @@
 import { db } from '../db/database';
+import { toast } from 'sonner';
 
 // Función para avisar al Layout que hay cambios en la cola
 const notifyQueueChange = () => {
@@ -38,9 +39,16 @@ export const processSyncQueue = async () => {
         await db.sync_queue.delete(req.id);
         syncedSomething = true;
         notifyQueueChange();
+      } else if (response.status === 400 || response.status === 422) {
+        console.error(`Payload rechazado por el servidor (${response.status}). Eliminando de la cola para no bloquear:`, req);
+        await db.sync_queue.delete(req.id);
+        notifyQueueChange();
+        toast.error('Un comprobante no pudo enviarse por datos inválidos y fue descartado.');
+      } else if (response.status === 401) {
+        break;
       }
     } catch (error) {
-      console.error("Fallo al procesar petición encolada", error);
+      console.error("Fallo de red al procesar petición encolada", error);
       break; 
     }
   }

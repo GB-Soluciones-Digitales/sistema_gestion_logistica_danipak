@@ -44,7 +44,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (isNetworkError) {
-      if (isPostRequest) {
+      if (isPostRequest || error.config?.method?.toLowerCase() === 'put' || error.config?.method?.toLowerCase() === 'delete') {
         await addToSyncQueue(
           error.config.url,
           error.config.method,

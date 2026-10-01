@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { useAuth } from '../../context/AuthContext';
 import { processSyncQueue } from '../../utils/syncManager';
+import { db } from '../../db/database'; 
 import LogoExtendido from '../../assets/logo-extendido.svg';
 import Isotipo from '../../assets/isotipo.svg';
 
@@ -13,6 +14,7 @@ export default function Layout({ children }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0); 
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -43,20 +45,30 @@ export default function Layout({ children }) {
     }
   ];
 
-  // Sincronización automática al recuperar conexión
+  const checkPendingSyncs = async () => {
+    try {
+      const count = await db.sync_queue.count();
+      setPendingCount(count);
+    } catch (error) {
+      console.error("Error al contar pendientes", error);
+    }
+  };
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    checkPendingSyncs();
+    
+    window.addEventListener('sync-queue-changed', checkPendingSyncs);
+
     const handleOnline = async () => {
       setIsOnline(true);
-      toast.info('Conexión restablecida. Sincronizando datos pendientes...');
       setIsSyncing(true);
       await processSyncQueue();
       setIsSyncing(false);
-      toast.success('Sincronización completada.');
     };
 
     const handleOffline = () => {
       setIsOnline(false);
-      toast.warning('Sin conexión a internet. Modo offline activado.');
     };
 
     const handleBeforeInstallPrompt = (e) => {
@@ -69,23 +81,30 @@ export default function Layout({ children }) {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     
     return () => {
+      window.removeEventListener('sync-queue-changed', checkPendingSyncs);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
 
-  // Sincronización manual
   const handleManualSync = async () => {
     if (!navigator.onLine) {
-      toast.error('No hay conexión a internet en este momento.');
+      toast.error('No hay conexión a internet.');
       return;
     }
     setIsSyncing(true);
     toast.info('Sincronizando datos pendientes...');
-    await processSyncQueue();
+    const synced = await processSyncQueue();
     setIsSyncing(false);
-    toast.success('Sincronización completada.');
+    
+    if (synced) {
+        toast.success('Sincronización completada con éxito.');
+    } else if (pendingCount > 0) {
+        toast.error('El servidor aún no responde. Intente de nuevo más tarde.');
+    } else {
+        toast.info('No hay datos pendientes para sincronizar.');
+    }
   };
 
   const handleInstallClick = async () => {
@@ -115,19 +134,14 @@ export default function Layout({ children }) {
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus:outline-none focus:ring-2 focus:ring-sidebar-ring"
+          className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent focus:outline-none"
         >
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </header>
 
       <aside 
-        className={`
-          fixed inset-y-0 left-0 z-30 w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border
-          transform transition-transform duration-300 ease-in-out
-          md:relative md:translate-x-0
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="hidden md:flex items-center h-16 px-6 border-b border-sidebar-border font-display font-bold text-2xl text-sidebar-primary-foreground">
           <img src={LogoExtendido} alt="DaniPak Logo" className="h-8" />
@@ -149,27 +163,12 @@ export default function Layout({ children }) {
                       key={item.name}
                       to={item.path}
                       onClick={closeMobileMenu}
-                      className={`
-                        relative flex items-center gap-3 px-3 py-2.5 rounded-md font-medium transition-colors
-                        ${isActive 
-                          ? 'bg-sidebar-primary/10 text-sidebar-primary-foreground' 
-                          : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                        }
-                      `}
+                      className={`relative flex items-center gap-3 px-3 py-2.5 rounded-md font-medium transition-colors ${isActive ? 'bg-sidebar-primary/10 text-sidebar-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent'}`}
                     >
                       {isActive && (
-                        <svg 
-                          className="absolute -left-1 w-4 h-4 text-sidebar-primary fill-current" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
+                        <svg className="absolute -left-1 w-4 h-4 text-sidebar-primary fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                       )}
-                      
-                      <item.icon 
-                        size={20} 
-                        className={isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'} 
-                      />
+                      <item.icon size={20} className={isActive ? 'text-sidebar-primary' : 'text-sidebar-foreground/70'} />
                       {item.name}
                     </Link>
                   );
@@ -181,54 +180,48 @@ export default function Layout({ children }) {
 
         <div className="p-4 border-t border-sidebar-border space-y-2">
           {installPrompt && (
-            <button 
-              onClick={handleInstallClick}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-primary-foreground bg-sidebar-primary/20 hover:bg-sidebar-primary/30 transition-colors"
-            >
-              <Download size={20} className="text-sidebar-primary" />
-              Instalar Aplicación
+            <button onClick={handleInstallClick} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-primary-foreground bg-sidebar-primary/20 hover:bg-sidebar-primary/30">
+              <Download size={20} className="text-sidebar-primary" /> Instalar Aplicación
             </button>
           )}
 
           <button 
             onClick={handleManualSync}
             disabled={isSyncing}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-sidebar-foreground hover:bg-sidebar-accent transition-colors disabled:opacity-50"
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium transition-colors disabled:opacity-50 ${pendingCount > 0 ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300' : 'text-sidebar-foreground hover:bg-sidebar-accent'}`}
           >
-            <RefreshCw size={20} className={isSyncing ? "animate-spin text-primary" : ""} />
-            {isSyncing ? 'Sincronizando...' : 'Sincronizar Datos'}
+            <RefreshCw size={20} className={isSyncing ? "animate-spin text-primary" : pendingCount > 0 ? "text-amber-700" : ""} />
+            {isSyncing ? 'Sincronizando...' : pendingCount > 0 ? `Sincronizar (${pendingCount})` : 'Sincronizar Datos'}
           </button>
 
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-destructive hover:bg-sidebar-accent hover:text-destructive transition-colors"
-          >
-            <LogOut size={20} />
-            Cerrar Sesión
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md font-medium text-destructive hover:bg-sidebar-accent hover:text-destructive">
+            <LogOut size={20} /> Cerrar Sesión
           </button>
         </div>
       </aside>
 
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-10 md:hidden"
-          onClick={closeMobileMenu}
-        />
+        <div className="fixed inset-0 bg-black/50 z-10 md:hidden" onClick={closeMobileMenu} />
       )}
 
       <div className="fixed bottom-4 right-4 z-40 md:bottom-6 md:right-8">
         {!isOnline ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-destructive/20 bg-destructive/10 text-destructive shadow-sm backdrop-blur-sm">
             <WifiOff size={14} />
-            <span className="text-xs font-bold tracking-wide">Modo Offline</span>
+            <span className="text-xs font-bold tracking-wide">Offline {pendingCount > 0 && `(${pendingCount} Pendientes)`}</span>
           </div>
         ) : isSyncing ? (
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50 text-blue-700 shadow-sm backdrop-blur-sm">
             <RefreshCw size={14} className="animate-spin" />
-            <span className="text-xs font-bold tracking-wide">Sincronizando...</span>
+            <span className="text-xs font-bold tracking-wide">Enviando al servidor...</span>
+          </div>
+        ) : pendingCount > 0 ? (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700 shadow-sm backdrop-blur-sm animate-pulse">
+            <CloudAlert size={14} />
+            <span className="text-xs font-bold tracking-wide">{pendingCount} Comprobantes en espera</span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 shadow-sm backdrop-blur-sm transition-opacity duration-1000 opacity-70 hover:opacity-100">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700 shadow-sm backdrop-blur-sm transition-opacity duration-1000 opacity-0 hover:opacity-100">
             <Wifi size={14} />
             <span className="text-xs font-bold tracking-wide">Conectado - Sincronizado</span>
           </div>

@@ -77,7 +77,7 @@ export default function Configuracion() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6 pb-10">
       
       <div>
         <h1 className="text-2xl font-display font-bold text-foreground">Configuración del Sistema</h1>
@@ -89,7 +89,6 @@ export default function Configuracion() {
       <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
         <div className="p-6 border-b border-border bg-muted/30">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Building2 size={20} className="text-primary" />
             Datos Fiscales y de Contacto
           </h2>
         </div>

@@ -5,7 +5,6 @@ import { empresaService } from '../../api/empresaServices';
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import DataTable from '../../components/ui/DataTable';
 import Modal from '../../components/ui/Modal';
 
 

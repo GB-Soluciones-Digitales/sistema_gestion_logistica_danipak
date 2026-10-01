@@ -308,7 +308,7 @@ export default function CuentaDetalle() {
         {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando {movimientos.length} de {totalRegistros}
+              Mostrando página { page } de { totalPages }
             </span>
             <div className="flex items-center gap-2">
               <Button variant="outline" className="px-2 py-1 h-8" disabled={page === 1 || isLoading} onClick={() => setPage(p => p - 1)}>

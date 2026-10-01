@@ -164,7 +164,7 @@ export default function ComprobantesList() {
 
   const columnas = [
     { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
-    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo_comprobante || '-' },
+    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo || '-' },
     { key: 'numero_comprobante', label: 'Número', render: (fila) => <span className="font-medium">{fila.numero_comprobante}</span> },
     { key: 'nombre_destinatario', label: 'Destinatario', render: (fila) => fila.nombre_destinatario || '-' },
     { key: 'importe_flete_cobro', label: 'Flete Cobrar', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
@@ -344,7 +344,7 @@ export default function ComprobantesList() {
         {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando página {comprobantes.length} de {totalRecords} comprobantes
+              Mostrando página { currentPage } de { totalPages } comprobantes
             </span>
             <div className="flex gap-2 items-center">
               <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || isLoading} className="px-2 py-1 h-8">

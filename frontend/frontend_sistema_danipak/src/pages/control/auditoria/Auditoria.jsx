@@ -96,14 +96,15 @@ export default function Auditoria() {
         { key: "tabla_afectada", label: "Sección (Tabla)", render: (row) => <span className="capitalize">{row.tabla_afectada}</span> },
         {
             key: "acciones",
-            label: "",
+            label: "Acciones",
             render: (row) => (
                 <Button
                     variant="outline"
                     className="px-2 py-1 h-8"
                     onClick={() => setDetalleSeleccionado(row)}
+                    title="Ver detalles"
                 >
-                    <Eye size={16} className="text-blue-600 mr-1" /> Ver detalle
+                    <Eye size={16} className="text-blue-600 mr-1" />
                 </Button>
             ),
         },

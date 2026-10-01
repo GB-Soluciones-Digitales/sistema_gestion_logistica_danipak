@@ -156,7 +156,7 @@ export default function Localidades() {
         {!isLoading && totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando {localidades.length} de {totalRegistros} localidades
+              Mostrando página { page } de { totalPages } localidades
             </span>
             <div className="flex items-center gap-2">
               <Button 

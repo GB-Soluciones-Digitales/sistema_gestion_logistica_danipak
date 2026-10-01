@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { processSyncQueue } from './utils/syncManager';
 
 import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
@@ -19,11 +21,27 @@ import Localidades from "./pages/operaciones/Localidades";
 import Auditoria from './pages/control/auditoria/Auditoria';
 
 export default function App() {
+  const queryClient = useQueryClient();
+
   useEffect(() => {
-    const handleOnline = () => {
-      toast.success('Conexión a internet restaurada. El sistema vuelve a estar en línea.', {
+    const syncOnLoad = async () => {
+      if (navigator.onLine) {
+        const synced = await processSyncQueue();
+        if (synced) queryClient.invalidateQueries();
+      }
+    };
+    syncOnLoad();
+
+    const handleOnline = async () => {
+      toast.success('Conexión a internet restaurada. Sincronizando datos...', {
         duration: 4000,
       });
+      
+      const synced = await processSyncQueue();
+      if (synced) {
+        toast.success('Comprobantes pendientes enviados al servidor con éxito.');
+        queryClient.invalidateQueries(); 
+      }
     };
 
     const handleOffline = () => {
@@ -39,24 +57,18 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [queryClient]);
 
   return (
-    // El Provider envuelve todo para que el estado global viva en toda la app
     <AuthProvider>
-      {/* El Router maneja la navegacion en el navegador */}
       <BrowserRouter>
         <Toaster richColors position="top-center" />
         <SessionExpiredModal />
         
         <Routes>
-          
-          {/* Rutas Publicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/olvide-password" element={<OlvidePassword />} />
 
-          {/* Rutas Protegidas*/}
-          {/* Todas las rutas dentro de este bloque van a exigir token */}
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<ComprobantesList />} />
             <Route path="/comprobantes" element={<ComprobantesList />} />
@@ -72,10 +84,7 @@ export default function App() {
             <Route path="/auditoria" element={<Auditoria />} />
           </Route>
 
-          {/* Fallback */}
-          {/* Si alguien ingresa una URL que no existe va a ser redirigido al inicio */}
           <Route path="*" element={<NotFound />} />
-
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Building2, Phone, MapPin, Mail, Save, Loader2, KeyRound, EyeOff, Eye } from 'lucide-react';
 
 import { empresaService } from '../../api/empresaService';
-import { usuarioService } from '../../api/usuarioService';
+import { usuarioService } from '../../api/usuariosService';
 
 export default function Configuracion() {
   const queryClient = useQueryClient();

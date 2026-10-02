@@ -17,6 +17,10 @@ class UsuarioUpdate(BaseModel):
     password: Optional[str] = None
     estado: Optional[bool] = None
 
+class PasswordChange(BaseModel):
+    password_actual: str
+    password_nueva: str
+    
 class UsuarioResponse(UsuarioBase):
     id: int
     model_config = ConfigDict(from_attributes=True)

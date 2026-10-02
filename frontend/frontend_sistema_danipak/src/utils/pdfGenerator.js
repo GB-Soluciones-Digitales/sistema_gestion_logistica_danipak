@@ -1,7 +1,26 @@
 import { jsPDF } from 'jspdf';
+import { empresaService } from '../api/empresaService'; //
 
-const dibujarTicket = (doc, startY, comprobante, nombres) => {
-  const x = 10; // Margen izquierdo de 10mm
+const getDatosEmpresa = async () => {
+  try {
+    const empresa = await empresaService.getById(1);
+    return {
+      nombre: empresa.nombre.toUpperCase(),
+      telefonos: empresa.telefono_aux ? `Tel. / Cel.: ${empresa.telefono} / ${empresa.telefono_aux}` : `Tel: ${empresa.telefono}`,
+      direccion: empresa.direccion
+    };
+  } catch (error) {
+    console.error('Error al obtener datos de la empresa:', error);
+    return {
+      nombre: "EXPRESO DANIPAK",
+      telefonos: "Tel. / Cel.: (0343) 155-104448 / 154-588697",
+      direccion: "(3100) Paraná - Entre Ríos"
+    };
+  }
+};
+
+const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
+  const x = 10;
   let y = startY;
 
   // ==========================================
@@ -18,11 +37,14 @@ const dibujarTicket = (doc, startY, comprobante, nombres) => {
   doc.setFontSize(18);
   doc.text("EXPRESO", x + 10, y + 14);
   doc.setFontSize(22);
-  doc.text("DANIPAK", x + 10, y + 22);
+  
+  // INYECCIÓN DINÁMICA DE EMPRESA
+  doc.text(datosEmpresa.nombre, x + 10, y + 22);
+  
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text("Tel. / Cel.: (0343) 155-104448 / 154-588697", x + 5, y + 27);
-  doc.text("(3100) Paraná - Entre Ríos", x + 15, y + 31);
+  doc.text(datosEmpresa.telefonos, x + 5, y + 27);
+  doc.text(datosEmpresa.direccion, x + 15, y + 31);
 
   // Recuadro central "X"
   doc.rect(100, y + 12, 10, 10);
@@ -40,7 +62,7 @@ const dibujarTicket = (doc, startY, comprobante, nombres) => {
   
   // Extraer fecha segura
   const fecha = comprobante.fecha_emision ? new Date(comprobante.fecha_emision) : new Date();
-  const dia = String(fecha.getDate() + 1).padStart(2, '0'); // Ajuste por zona horaria
+  const dia = String(fecha.getDate() + 1).padStart(2, '0');
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const anio = String(fecha.getFullYear());
 
@@ -100,7 +122,6 @@ const dibujarTicket = (doc, startY, comprobante, nombres) => {
   doc.line(x, y + 40, x + 190, y + 40); // Separador horizontal
 
   // --- Fila 3: Importes y Bultos ---
-  // Separadores verticales
   doc.line(x + 95, y + 40, x + 95, y + 60);
   doc.line(x + 140, y + 40, x + 140, y + 60);
 
@@ -162,10 +183,12 @@ const dibujarTicket = (doc, startY, comprobante, nombres) => {
   doc.line(x + 145, y + 89, x + 185, y + 89);
   doc.text("D.N.I.", x + 165, y + 93, { align: "center" });
 
-  doc.setLineDash([], 0); // Resetear dash
+  doc.setLineDash([], 0); 
 };
 
-export const generarPdfLocal = (comprobante, nombres = {}) => {
+export const generarPdfLocal = async (comprobante, nombres = {}) => {
+  const datosEmpresa = await getDatosEmpresa();
+
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -173,7 +196,7 @@ export const generarPdfLocal = (comprobante, nombres = {}) => {
   });
 
   // Ticket Original (Mitad superior)
-  dibujarTicket(doc, 10, comprobante, nombres);
+  dibujarTicket(doc, 10, comprobante, nombres, datosEmpresa);
 
   // Línea de corte punteada
   doc.setLineDash([2, 2], 0);
@@ -182,7 +205,7 @@ export const generarPdfLocal = (comprobante, nombres = {}) => {
   doc.setLineDash([], 0);
 
   // Ticket Duplicado (Mitad inferior)
-  dibujarTicket(doc, 155, comprobante, nombres);
+  dibujarTicket(doc, 155, comprobante, nombres, datosEmpresa);
 
   return doc.output('blob');
 };

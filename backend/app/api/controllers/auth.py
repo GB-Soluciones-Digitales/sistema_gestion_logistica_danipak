@@ -8,13 +8,34 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import create_refresh_token, get_password_hash, verify_password, create_access_token
 from app.schemas.auth import RecuperarPassword, ResetearPassword, Token
-from app.api.deps import get_db
+from app.api.deps import get_db, get_current_user
 from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username, update_usuario
-from app.schemas.usuario import UsuarioUpdate
+from app.schemas.usuario import UsuarioUpdate, PasswordChange
 from app.services.email import enviar_email_recuperacion
 from app.core.limiter import limiter
+from app.models import Usuario
 
 router = APIRouter(prefix="/auth", tags=["Autenticación"])
+
+@router.put("/me/password", status_code=status.HTTP_200_OK)
+def change_password(data: PasswordChange, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    # 1. Verificar que la contraseña actual sea correcta
+    if not verify_password(data.password_actual, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual es incorrecta")
+
+    # 2. Verificar que la nueva no sea igual a la vieja
+    if data.password_actual == data.password_nueva:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe ser distinta a la actual")
+
+    # 3. Validar longitud mínima
+    if len(data.password_nueva) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
+
+    # 4. Encriptar y guardar (usando tu método existente update_usuario)
+    update_data = UsuarioUpdate(password=data.password_nueva)
+    update_usuario(db=db, db_usuario=current_user, usuario_in=update_data)
+    
+    return {"mensaje": "Contraseña actualizada exitosamente"}
 
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")

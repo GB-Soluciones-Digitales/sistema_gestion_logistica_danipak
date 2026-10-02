@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -21,7 +21,7 @@ export default function ComprobantesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 10;
   const [comprobanteAAnular, setComprobanteAAnular] = useState(null);
-  const [downloading, setDownloading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filtros, setFiltros] = useState({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
@@ -79,43 +79,50 @@ export default function ComprobantesList() {
     setCurrentPage(1);
   };
 
-  const handleDescargarPdf = async (fila) => {
-    setDownloading(true);
-    toast.info("Generando PDF...");
-    try {
-      const blob = generarPdfLocal(fila);
-      
-      const url = window.URL.createObjectURL(blob);
-      const titulo = `Comprobante_${fila.numero_comprobante || 'Offline'}.pdf`;
+  const handleDescargarPdf = async (comprobante) => {
+    // 1. Abrir ventana INMEDIATAMENTE al hacer clic
+    const pdfWindow = window.open('', '_blank');
+    
+    if (!pdfWindow) {
+      toast.error("El navegador bloqueó la ventana emergente. Por favor, habilite los pop-ups.");
+      return;
+    }
 
-      const pdfWindow = window.open('');
-      if (pdfWindow) {
-        pdfWindow.document.write(`
-          <html>
-            <head>
-              <title>${titulo}</title>
-              <style>
-                body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
-                embed { width: 100vw; height: 100vh; border: none; }
-              </style>
-            </head>
-            <body>
-              <embed src="${url}" type="application/pdf">
-            </body>
-          </html>
-        `);
-        pdfWindow.document.close();
-      } else {
-        toast.error("El navegador bloqueó la ventana emergente.");
-      }
+    pdfWindow.document.write('<html><body style="background:#333;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><h2>Generando comprobante...</h2></body></html>');
+    
+    setDownloadingId(comprobante.id);
+    toast.info("Generando PDF...");
+
+    try {
+      const blob = await generarPdfLocal(comprobante);
+      const url = window.URL.createObjectURL(blob);
+      const titulo = `Comprobante_${comprobante.numero_comprobante || 'Offline'}.pdf`;
+
+      pdfWindow.document.open(); 
+      pdfWindow.document.write(`
+        <html>
+          <head>
+            <title>${titulo}</title>
+            <style>
+              body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+              embed { width: 100vw; height: 100vh; border: none; }
+            </style>
+          </head>
+          <body>
+            <embed src="${url}" type="application/pdf">
+          </body>
+        </html>
+      `);
+      pdfWindow.document.close();
 
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
       toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error(error);
+      pdfWindow.close(); 
       toast.error("Error al generar el PDF");
     } finally {
-      setDownloading(false);
+      setDownloadingId(null);
     }
   };
 
@@ -133,8 +140,8 @@ export default function ComprobantesList() {
     setIsExporting(true);
     toast.info("Generando archivo Excel...");
     try {
-      const data = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
-      const comprobantesExport = data.items || [];
+      const exportData = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
+      const comprobantesExport = exportData.items || [];
 
       const datosFormateados = comprobantesExport.map(comp => {
         const clienteEncontrado = clientesSelect.find(c => c.id === comp.cliente_remitente_id);
@@ -181,7 +188,7 @@ export default function ComprobantesList() {
           <Button variant="outline" onClick={() => navigate(`/comprobantes/${fila.id}`)} className="px-2 py-1 h-8" title="Ver">
             <Eye size={16} className="text-blue-600" />
           </Button>
-          <Button variant="outline" onClick={() => handleDescargarPdf(fila)} disabled={downloading} className="px-2 py-1 h-8" title="Descargar PDF">
+          <Button variant="outline" onClick={() => handleDescargarPdf(fila)} disabled={downloadingId === fila.id} className="px-2 py-1 h-8" title="Descargar PDF">
             <Download size={16} className="text-green-600" />
           </Button>
           <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">
@@ -202,10 +209,17 @@ export default function ComprobantesList() {
           <h1 className="text-2xl font-display font-bold text-foreground">Comprobantes</h1>
           <p className="text-muted-foreground text-sm mt-1">Gestión de envíos y remitos.</p>
         </div>
-        <Button onClick={() => navigate('/comprobantes/nuevo')} className="w-full sm:w-auto">
-          <Plus size={20} className="mr-2" />
-          Nuevo Comprobante
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Botón de recarga manual */}
+          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['comprobantes'] })} className="w-full sm:w-auto text-muted-foreground">
+            <RefreshCw size={18} className="mr-2" />
+            Refrescar
+          </Button>
+          <Button onClick={() => navigate('/comprobantes/nuevo')} className="w-full sm:w-auto">
+            <Plus size={20} className="mr-2" />
+            Nuevo Comprobante
+          </Button>
+        </div>
       </div>
 
       <div className="bg-card p-4 rounded-lg border border-border shadow-sm">
@@ -341,19 +355,26 @@ export default function ComprobantesList() {
           <DataTable columns={columnas} data={comprobantes} />
         )}
         
-        {!isLoading && totalPages > 0 && (
+        {!isLoading && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando página { currentPage } de { totalPages } comprobantes
+              Total: <span className="font-medium text-foreground">{totalRecords}</span> registros
             </span>
-            <div className="flex gap-2 items-center">
-              <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1 || isLoading} className="px-2 py-1 h-8">
-                <ChevronLeft size={18} />
-              </Button>
-              <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 h-8">
-                <ChevronRight size={18} />
-              </Button>
-            </div>
+            {totalPages > 0 && (
+              <>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <div className="flex gap-2 items-center">
+                  <Button variant="outline" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-2 py-1 h-8">
+                    <ChevronLeft size={18} />
+                  </Button>
+                  <Button variant="outline" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-2 py-1 h-8">
+                    <ChevronRight size={18} />
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

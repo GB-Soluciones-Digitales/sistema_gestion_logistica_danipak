@@ -39,7 +39,6 @@ export default function ComprobanteView() {
           });
         } catch (err) {
           console.error("Error al cargar datos vinculados", err);
-          // Si algo falla, mostramos los IDs como respaldo
           setNombres({
             cliente: `ID: ${data.cliente_remitente_id}`,
             locRemitente: `ID: ${data.localidad_remitente_id}`,
@@ -59,39 +58,45 @@ export default function ComprobanteView() {
   }, [id]);
 
   const handleDescargarPdf = async () => {
+    const pdfWindow = window.open('', '_blank');
+    
+    if (!pdfWindow) {
+      toast.error("El navegador bloqueó la ventana emergente. Por favor, habilite los pop-ups.");
+      return;
+    }
+
+    pdfWindow.document.write('<html><body style="background:#333;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><h2>Generando comprobante...</h2></body></html>');
+    
     setDownloading(true);
     toast.info("Generando PDF...");
+
     try {
-      const blob = generarPdfLocal(comprobante, nombres);
-      
+      const blob = await generarPdfLocal(comprobante, nombres);
       const url = window.URL.createObjectURL(blob);
       const titulo = `Comprobante_${comprobante.numero_comprobante || 'Offline'}.pdf`;
 
-      const pdfWindow = window.open('');
-      if (pdfWindow) {
-        pdfWindow.document.write(`
-          <html>
-            <head>
-              <title>${titulo}</title>
-              <style>
-                body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
-                embed { width: 100vw; height: 100vh; border: none; }
-              </style>
-            </head>
-            <body>
-              <embed src="${url}" type="application/pdf">
-            </body>
-          </html>
-        `);
-        pdfWindow.document.close();
-      } else {
-        toast.error("El navegador bloqueó la ventana emergente.");
-      }
+      pdfWindow.document.open();
+      pdfWindow.document.write(`
+        <html>
+          <head>
+            <title>${titulo}</title>
+            <style>
+              body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
+              embed { width: 100vw; height: 100vh; border: none; }
+            </style>
+          </head>
+          <body>
+            <embed src="${url}" type="application/pdf">
+          </body>
+        </html>
+      `);
+      pdfWindow.document.close();
 
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
       toast.success("PDF generado exitosamente");
     } catch (error) {
       console.error(error);
+      pdfWindow.close();
       toast.error("Error al generar el PDF");
     } finally {
       setDownloading(false);

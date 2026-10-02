@@ -1,17 +1,35 @@
 import { jsPDF } from 'jspdf';
+import { empresaService } from '../api/empresaService';
 
-export const generarReciboPdf = (pago, clienteNombre) => {
+export const generarReciboPdf = async (pago, clienteNombre) => {
+    let datosEmpresa;
+    try {
+      const empresa = await empresaService.getById(1);
+      datosEmpresa = {
+        nombre: empresa.nombre.toUpperCase(),
+        telefonos: empresa.telefono_aux ? `Tel. / Cel.: ${empresa.telefono} / ${empresa.telefono_aux}` : `Tel: ${empresa.telefono}`,
+        direccion: empresa.direccion
+      };
+    } catch (error) {
+      console.error('Error al obtener datos de la empresa:', error);
+      datosEmpresa = {
+        nombre: "EXPRESO DANIPAK",
+        telefonos: "Tel. / Cel.: (0343) 155-104448 / 154-588697",
+        direccion: "(3100) Paraná - Entre Ríos"
+      };
+    }
+
     const doc = new jsPDF();
 
-    // Encabezado Institucional
+    // Encabezado Institucional Dinámico
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("EXPRESO DANIPAK", 14, 22);
+    doc.text(datosEmpresa.nombre, 14, 22);
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("Tel. / Cel.: (0343) 155-104448 / 154-588697", 14, 30);
-    doc.text("(3100) Paraná - Entre Ríos", 14, 35);
+    doc.text(datosEmpresa.telefonos, 14, 30);
+    doc.text(datosEmpresa.direccion, 14, 35);
 
     // Cuadro derecho: Datos del Recibo
     doc.rect(120, 12, 75, 28);
@@ -44,7 +62,7 @@ export const generarReciboPdf = (pago, clienteNombre) => {
     // Firmas
     doc.setLineDashPattern([2, 2], 0);
     doc.line(20, 140, 80, 140);
-    doc.text("Firma Expreso Danipak", 50, 146, { align: "center" });
+    doc.text(`Firma ${datosEmpresa.nombre}`, 50, 146, { align: "center" });
 
     doc.line(120, 140, 180, 140);
     doc.text("Aclaración", 150, 146, { align: "center" });

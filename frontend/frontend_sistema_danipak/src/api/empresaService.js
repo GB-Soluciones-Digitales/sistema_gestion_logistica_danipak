@@ -3,7 +3,7 @@ import api from "./axios"
 export const empresaService = {
 
     createEmpresa: async(data) => {
-        const response = await api.post("/api/empresa", data)
+        const response = await api.post("/api/empresa/", data)
         return response.data
     },
 

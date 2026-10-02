@@ -24,4 +24,9 @@ export const usuarioService = {
         const response = await api.put(`/api/usuarios/${id}`, data);
         return response.data;
     },
+
+    changePassword: async (data) => {
+        const response = await api.put("/api/auth/me/password", data);
+        return response.data;
+    },
 }

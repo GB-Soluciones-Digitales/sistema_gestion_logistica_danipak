@@ -11,7 +11,7 @@ from app.schemas.auditoria import AuditoriaPaginatedResponse, AuditoriaResponse
 router = APIRouter(prefix="/auditoria", tags=["Auditoría"], dependencies=[Depends(get_current_user)])
 
 @router.get("/", response_model=AuditoriaPaginatedResponse)
-def get_auditoria_logs(skip: int = 0, limit: int = 100, tabla_afectada: Optional[str] = None, accion: Optional[str] = None, usuario_id: Optional[int] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, search: Optional[str] = None,db: Session = Depends(get_db)):
+def get_auditoria_logs(skip: int = 0, limit: int = 100, tabla_afectada: Optional[str] = None, accion: Optional[str] = None, usuario_id: Optional[int] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, search: Optional[str] = None, db: Session = Depends(get_db)):
     return crud_auditoria.get_auditoria_logs(
         db=db,
         skip=skip,

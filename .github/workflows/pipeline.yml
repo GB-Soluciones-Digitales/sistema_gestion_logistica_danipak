@@ -1,6 +1,5 @@
 name: CI DaniPak Pipeline
 
-# El pipeline se dispara cada vez que se hace un pull request hacia la rama main
 on:
   pull_request:
     branches: [ "main" ]
@@ -23,7 +22,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           
-      # Esto es para mas adelante otro paso cuando hayan tests, para que se ejecuten y verifiquen que todo funciona
+      # Se mantiene comentado hasta implementar tests formales
       #- name: Verificar que la API compila (Dry Run)
       #  run: |
       #    cd backend
@@ -40,8 +39,8 @@ jobs:
         with:
           node-version: "20"
           
-      #- name: Instalar y compilar PWA
-      #  run: |
-      #    cd frontend
-      #    npm install
-      #    npm run build
+      - name: Instalar y compilar PWA
+        run: |
+          cd frontend/frontend_sistema_danipak
+          npm install
+          npm run build

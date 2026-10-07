@@ -80,12 +80,13 @@ export default function CuentaDetalle() {
 
   const pagoMutation = useMutation({
     mutationFn: (nuevoPagoData) => pagoService.createPago(nuevoPagoData),
-    onSuccess: (nuevoPago) => {
+    onSuccess: async (nuevoPago) => {
       toast.success("Pago registrado con éxito");
       
       try {
-        const blob = generarReciboPdf(nuevoPago, resumen.razon_social);
+        const blob = await generarReciboPdf(nuevoPago, resumen.razon_social);
         const url = window.URL.createObjectURL(blob);
+
         const pdfWindow = window.open('');
         if (pdfWindow) {
           pdfWindow.document.write(`

@@ -1,5 +1,3 @@
-import os
-
 import jwt
 from typing import Generator
 from fastapi import Depends, HTTPException, status
@@ -31,11 +29,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         detail="No se pudieron validar las credenciales",
         headers={"WWW-Authenticate": "Bearer"},
     )
-
-    if os.getenv("ENV") == "development":
-        user = get_usuario_by_id(db, 1) 
-        if user:
-            return user
 
     if not token:
         raise credentials_exception

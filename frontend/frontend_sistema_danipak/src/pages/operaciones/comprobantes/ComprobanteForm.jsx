@@ -161,7 +161,7 @@ export default function ComprobanteForm() {
                 localidad_destinatario_rel: { nombre: locDestObj ? locDestObj.nombre : '' }
             };
 
-            const blob = generarPdfLocal(datosParaPdf);
+            const blob = await generarPdfLocal(datosParaPdf);
             const url = window.URL.createObjectURL(blob);
 
             const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;

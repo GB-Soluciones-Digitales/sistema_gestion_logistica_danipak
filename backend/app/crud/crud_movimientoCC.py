@@ -2,7 +2,6 @@ from fastapi import HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from datetime import date, datetime
-from fastapi import APIRouter
 
 from app.models.MovimientoCC import MovimientoCC
 from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCUpdate

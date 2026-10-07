@@ -15,6 +15,7 @@ import app.models.Usuario
 import app.models.Auditoria
 import app.models.Cliente
 import app.models.Comprobante
+import app.models.Empresa
 import app.models.Factura
 import app.models.Localidad
 import app.models.MovimientoCC

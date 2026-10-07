@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '../../context/AuthContext';
 import { processSyncQueue } from '../../utils/syncManager';
@@ -16,6 +17,8 @@ export default function Layout({ children }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [pendingCount, setPendingCount] = useState(0); 
   
+  const queryClient = useQueryClient();
+
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
@@ -63,7 +66,14 @@ export default function Layout({ children }) {
     const handleOnline = async () => {
       setIsOnline(true);
       setIsSyncing(true);
-      await processSyncQueue();
+      
+      const synced = await processSyncQueue();
+      
+      if (synced) {
+        toast.success('Datos pendientes sincronizados con el servidor.');
+        queryClient.invalidateQueries();
+      }
+      
       setIsSyncing(false);
     };
 
@@ -86,7 +96,7 @@ export default function Layout({ children }) {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [queryClient]);
 
   const handleManualSync = async () => {
     if (!navigator.onLine) {

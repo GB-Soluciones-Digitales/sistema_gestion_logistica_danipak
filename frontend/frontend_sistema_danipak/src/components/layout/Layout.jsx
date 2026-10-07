@@ -96,7 +96,7 @@ export default function Layout({ children }) {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
-  }, []);
+  }, [queryClient]);
 
   const handleManualSync = async () => {
     if (!navigator.onLine) {

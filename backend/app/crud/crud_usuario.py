@@ -1,5 +1,4 @@
 import datetime
-
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -7,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.models.Usuario import Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioUpdate
 from app.core.security import get_password_hash
-from backend.app.crud.crud_auditoria import create_auditoria_log
-from backend.app.schemas.auditoria import AuditoriaCreate
+from app.crud.crud_auditoria import create_auditoria_log
+from app.schemas.auditoria import AuditoriaCreate
 
 def get_usuario_by_id(db: Session, usuario_id: int) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.id == usuario_id).first()

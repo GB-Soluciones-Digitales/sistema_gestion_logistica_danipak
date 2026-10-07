@@ -41,6 +41,6 @@ jobs:
           
       - name: Instalar y compilar PWA
         run: |
-          cd frontend
+          cd frontend/frontend_sistema_danipak
           npm install
           npm run build

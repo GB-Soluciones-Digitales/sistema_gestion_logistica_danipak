@@ -6,7 +6,7 @@ from app.api.deps import get_db, get_current_user
 from app.models.MovimientoCC import MovimientoCC
 from app.schemas.movimiento_cc import MovimientoCCCreate, MovimientoCCPaginatedResponse, MovimientoCCResponse
 from app.crud import crud_movimientoCC
-from backend.app.models.Usuario import Usuario
+from app.models.Usuario import Usuario
 
 router = APIRouter(prefix="/movimientos", tags=["Movimientos CC"])
 

@@ -46,7 +46,6 @@ def get_clientes(db: Session, skip: int = 0, limit: int = 100, search: str = Non
         query = query.filter(
             or_(
                 Cliente.razon_social.ilike(f"%{search}%"),
-                Cliente.nombre_fantasia.ilike(f"%{search}%"),
                 Cliente.cuit_dni.ilike(f"%{search}%")
             )
         )

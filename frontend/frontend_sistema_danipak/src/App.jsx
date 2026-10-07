@@ -1,10 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import { processSyncQueue } from './utils/syncManager';
 
 import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
@@ -22,33 +20,14 @@ import Auditoria from './pages/control/auditoria/Auditoria';
 import Configuracion from './pages/sistema/Configuracion';
 
 export default function App() {
-  const queryClient = useQueryClient();
 
   useEffect(() => {
-    const syncOnLoad = async () => {
-      if (navigator.onLine) {
-        const synced = await processSyncQueue();
-        if (synced) queryClient.invalidateQueries();
-      }
-    };
-    syncOnLoad();
-
-    const handleOnline = async () => {
-      toast.success('Conexión a internet restaurada. Sincronizando datos...', {
-        duration: 4000,
-      });
-      
-      const synced = await processSyncQueue();
-      if (synced) {
-        toast.success('Comprobantes pendientes enviados al servidor con éxito.');
-        queryClient.invalidateQueries(); 
-      }
+    const handleOnline = () => {
+      toast.success('Conexión a internet restaurada.', { duration: 4000 });
     };
 
     const handleOffline = () => {
-      toast.error('Se perdió la conexión a internet. Trabajando de forma local.', {
-        duration: 8000, 
-      });
+      toast.error('Se perdió la conexión a internet. Trabajando de forma local.', { duration: 8000 });
     };
 
     window.addEventListener('online', handleOnline);
@@ -58,7 +37,7 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [queryClient]);
+  }, []);
 
   return (
     <AuthProvider>

@@ -33,7 +33,7 @@ def change_password(data: PasswordChange, db: Session = Depends(get_db), current
 
     # 4. Encriptar y guardar (usando tu método existente update_usuario)
     update_data = UsuarioUpdate(password=data.password_nueva)
-    update_usuario(db=db, db_usuario=current_user, usuario_in=update_data)
+    update_usuario(db=db, db_usuario=current_user, usuario_in=update_data, usuario_id=current_user.id)
     
     return {"mensaje": "Contraseña actualizada exitosamente"}
 

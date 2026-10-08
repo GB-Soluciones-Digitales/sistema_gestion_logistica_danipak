@@ -65,9 +65,14 @@ export default function ComprobanteForm() {
         if (isEditing) {
           const comprobante = await comprobantesService.getById(id);
           const formattedDate = comprobante.fecha_emision.split('T')[0];
+
+          const clientesDescargados = resClientes.items || [];
+          const remitenteEncontrado = clientesDescargados.find(c => c.id === comprobante.cliente_remitente_id);
+
           reset({
             ...comprobante,
-            fecha_emision: formattedDate
+            fecha_emision: formattedDate,
+            nombre_remitente: remitenteEncontrado ? remitenteEncontrado.razon_social : (comprobante.nombre_remitente || '')
           });
         }
       } catch (error) {

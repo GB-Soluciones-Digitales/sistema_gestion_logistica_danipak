@@ -57,11 +57,27 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     if (isNetworkError) {
+      // Evitamos encolar intentos de login sin conexión
+      if (originalRequest.url.includes('/login')) {
+        toast.error('No podés iniciar sesión sin conexión a internet.');
+        return Promise.reject(error);
+      }
+
       if (isWriteRequest) {
+        // Parseo seguro con try/catch
+        let requestData = error.config.data;
+        try {
+          if (typeof error.config.data === 'string') {
+            requestData = JSON.parse(error.config.data);
+          }
+        } catch (error) {
+          console.warn('Payload no es JSON válido, se guarda crudo en la cola local', error);
+        }
+
         await addToSyncQueue(
           error.config.url,
           error.config.method,
-          JSON.parse(error.config.data)
+          requestData
         );
         toast.warning('Sin conexión. Registro guardado localmente para envío posterior.');
         

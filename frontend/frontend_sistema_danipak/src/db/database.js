@@ -1,5 +1,14 @@
 import Dexie from 'dexie';
 
+/**
+ * PATRÓN DE ARQUITECTURA OFFLINE:
+ * El soporte offline y la caché local están limitados intencionalmente al flujo 
+ * operativo principal (comprobantes, clientes, localidades). 
+ * Los módulos administrativos y financieros (facturas, pagos, movimientos, usuarios) 
+ * no tienen fallback offline; requieren conexión obligatoria para garantizar 
+ * la seguridad y consistencia de los datos sensibles.
+ */
+
 export const db = new Dexie('DaniPakDB');
 
 // V1: Estructura original

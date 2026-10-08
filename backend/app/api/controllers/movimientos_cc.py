@@ -1,6 +1,7 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import date
 
 from app.api.deps import get_db, get_current_user
 from app.models.MovimientoCC import MovimientoCC
@@ -21,9 +22,6 @@ def get_resumen_general(db: Session = Depends(get_db), current_user: Usuario = D
 @router.get("/cliente/{cliente_id}/resumen")
 def get_resumen_cuenta_corriente(cliente_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     return crud_movimientoCC.get_resumen_cuenta_cliente(db, cliente_id)
-
-from datetime import date
-from typing import Optional
 
 @router.get("/cliente/{cliente_id}", response_model=MovimientoCCPaginatedResponse)
 def get_movimientos_cliente(cliente_id: int, skip: int = 0, limit: int = 100, anulado: Optional[bool] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, tipo_movimiento: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):

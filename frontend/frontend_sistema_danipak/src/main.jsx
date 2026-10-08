@@ -1,12 +1,26 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import App from './App.jsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import './index.css'
-
+import { toast } from 'sonner'
 import { registerSW } from 'virtual:pwa-register'
 
-registerSW({ immediate: true })
+import App from './App.jsx'
+import './index.css'
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    toast.info('Hay una nueva versión de DaniPak disponible', {
+      duration: Infinity,
+      action: {
+        label: 'Actualizar ahora',
+        onClick: () => updateSW(true)
+      }
+    })
+  },
+  onOfflineReady() {
+    toast.success('Sistema listo para funcionar sin conexión.');
+  }
+})
 
 const queryClient = new QueryClient({
   defaultOptions: {

@@ -2,7 +2,7 @@
 
 Revision ID: 425f60d229d6
 Revises: f56a7caa32f0
-Create Date: 2026-10-08 18:05:51.322870
+Create Date: 2026-10-08 18:00:00.000000
 
 """
 from typing import Sequence, Union
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-# Dejá las variables 'revision' y 'down_revision' exactamente 
-# como te las generó el archivo original, no las copies de acá.
+revision: str = '425f60d229d6'
+down_revision: Union[str, Sequence[str], None] = 'f56a7caa32f0'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

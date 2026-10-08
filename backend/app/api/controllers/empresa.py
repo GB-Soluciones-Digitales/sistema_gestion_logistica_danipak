@@ -15,7 +15,7 @@ def create_empresa(empresa_in: EmpresaCreate, db: Session = Depends(get_db), cur
     if empresa_existente:
         raise HTTPException(status_code=400, detail="Los datos de la empresa ya están registrados. Debe actualizarlos.")
     
-    return crud_empresa.create_empresa(db=db, empresa=empresa_in, usuario_id=current_user.id) # No se necesita pasar el usuario_id porque no auditamos esta creacion.
+    return crud_empresa.create_empresa(db=db, empresa=empresa_in) # No se necesita pasar el usuario_id porque no auditamos esta creacion.
 
 @router.get("/{empresa_id}", response_model=EmpresaResponse)
 def get_empresa(empresa_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):

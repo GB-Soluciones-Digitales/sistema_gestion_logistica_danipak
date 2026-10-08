@@ -32,8 +32,10 @@ export const clientesServices = {
             });
             
             if (response.data && response.data.items) {
-                await db.cache_clientes.clear();
-                await db.cache_clientes.bulkAdd(response.data.items);
+                await db.transaction('rw', db.cache_clientes, async () => {
+                    await db.cache_clientes.clear();
+                    await db.cache_clientes.bulkAdd(response.data.items);
+                });
             }
             return response.data; 
         } catch (error) {

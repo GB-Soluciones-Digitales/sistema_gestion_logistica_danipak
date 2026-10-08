@@ -31,8 +31,10 @@ export const localidadService = {
             });
             
             if (response.data && response.data.items) {
-                await db.cache_localidades.clear();
-                await db.cache_localidades.bulkAdd(response.data.items);
+                await db.transaction('rw', db.cache_localidades, async () => {
+                    await db.cache_localidades.clear();
+                    await db.cache_localidades.bulkAdd(response.data.items);
+                });
             }
             return response.data;
         } catch (error) {

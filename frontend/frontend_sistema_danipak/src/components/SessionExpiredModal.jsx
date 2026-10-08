@@ -22,7 +22,7 @@ export const SessionExpiredModal = () => {
         <Modal 
             isOpen={isOpen} 
             onClose={() => {}}
-            titulo="Sesión Expirada"
+            title="Sesión Expirada"
         >
             <div className="text-center p-4">
                 <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -5,6 +5,18 @@ import { addToSyncQueue } from '../utils/syncManager';
 // Usamos la variable de entorno, VITE_API_URL, para configurar la URL
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (token) => {
+  refreshSubscribers.forEach((cb) => cb(token));
+  refreshSubscribers = [];
+};
+
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
@@ -40,19 +52,35 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const isNetworkError = error.code === 'ERR_NETWORK' || error.message.includes('Network Error');
-    const isPostRequest = error.config?.method?.toLowerCase() === 'post';
+    const method = error.config?.method?.toLowerCase();
+    const isWriteRequest = method === 'post' || method === 'put' || method === 'delete';
     const originalRequest = error.config;
 
     if (isNetworkError) {
-      if (isPostRequest || error.config?.method?.toLowerCase() === 'put' || error.config?.method?.toLowerCase() === 'delete') {
+      // Evitamos encolar intentos de login sin conexión
+      if (originalRequest.url.includes('/login')) {
+        toast.error('No podés iniciar sesión sin conexión a internet.');
+        return Promise.reject(error);
+      }
+
+      if (isWriteRequest) {
+        // Parseo seguro con try/catch
+        let requestData = error.config.data;
+        try {
+          if (typeof error.config.data === 'string') {
+            requestData = JSON.parse(error.config.data);
+          }
+        } catch (error) {
+          console.warn('Payload no es JSON válido, se guarda crudo en la cola local', error);
+        }
+
         await addToSyncQueue(
           error.config.url,
           error.config.method,
-          JSON.parse(error.config.data)
+          requestData
         );
         toast.warning('Sin conexión. Registro guardado localmente para envío posterior.');
         
-        // Simula un éxito devolviendo una ID temporal
         return Promise.resolve({ data: { offline: true, id: 'PENDIENTE-' + Date.now() } });
       } else {
         toast.error('Sin conexión al servidor para cargar los datos.');
@@ -62,7 +90,24 @@ api.interceptors.response.use(
     // Maneja los errores HTTP
     else if (error.response) {
       if (error.response.status === 401 && !originalRequest._retry) {
+
+        // Bloquea el refresh y el modal de sesión si el error viene de un intento de login
+        if (originalRequest.url.includes('/login')) {
+          return Promise.reject(error);
+        }
+
+        // Si ya hay un refresh en proceso, encola la petición
+        if (isRefreshing) {
+          return new Promise((resolve) => {
+            subscribeTokenRefresh((newToken) => {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+              resolve(api(originalRequest));
+            });
+          });
+        }
+
         originalRequest._retry = true;
+        isRefreshing = true;
 
         try {
           // Pedimos un nuevo token. La cookie de refresh viaja sola gracias a withCredentials
@@ -73,9 +118,17 @@ api.interceptors.response.use(
 
           // Actualizamos el header de la peticion que habia fallado y la disparamos de nuevo
           originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          
+          // Libera las peticiones encoladas
+          onRefreshed(newAccessToken);
+          isRefreshing = false;
+
           return api(originalRequest);
           
         } catch (refreshError) {
+          // Si falla, vacía la cola y expulsa al usuario
+          refreshSubscribers = [];
+          isRefreshing = false;
           // Si el refresh expira (pasaron los 7 dias), lo sacamos al login
           localStorage.removeItem('token');
           window.dispatchEvent(new Event('session-expired'));

@@ -60,7 +60,7 @@ def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2Pass
         key="refresh_token",
         value=refresh_token,
         httponly=True, 
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=7 * 24 * 60 * 60
     )

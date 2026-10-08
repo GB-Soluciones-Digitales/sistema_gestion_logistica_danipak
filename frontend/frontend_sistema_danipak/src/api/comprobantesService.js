@@ -67,8 +67,10 @@ export const comprobantesService = {
             });
             
             if (response.data && response.data.items) {
-                await db.cache_comprobantes.clear();
-                await db.cache_comprobantes.bulkAdd(response.data.items);
+                await db.transaction('rw', db.cache_comprobantes, async () => {
+                    await db.cache_comprobantes.clear();
+                    await db.cache_comprobantes.bulkAdd(response.data.items);
+                });
             }
             return response.data;
         } catch (error) {

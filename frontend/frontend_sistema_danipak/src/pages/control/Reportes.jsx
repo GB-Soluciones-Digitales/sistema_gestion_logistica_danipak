@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { reportesService } from '../../api/reportesService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { toast } from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 

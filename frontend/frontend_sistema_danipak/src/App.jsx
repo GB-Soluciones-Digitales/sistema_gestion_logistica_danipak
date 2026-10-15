@@ -63,7 +63,7 @@ export default function App() {
             <Route path="/cuentas-corrientes/:id" element={<CuentaDetalle />} />
             <Route path="/localidades" element={<Localidades />} />
             <Route path="/auditoria" element={<Auditoria />} />
-            <Route path="/reportes" element={<Reportes />} />
+            <Route path="*" element={<Reportes />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Route>
 

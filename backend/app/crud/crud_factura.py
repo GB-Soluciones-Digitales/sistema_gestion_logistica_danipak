@@ -47,6 +47,8 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
             fecha_movimiento=db_factura.fecha,
             tipo_movimiento="Factura",
             referencia_id=db_factura.id,
+            numero_referencia=db_factura.numero_factura,
+            mes_correspondiente=db_factura.mes_correspondiente,
             importe=db_factura.importe_total,
             anulado=False,
             usuario_creador_id=usuario_id

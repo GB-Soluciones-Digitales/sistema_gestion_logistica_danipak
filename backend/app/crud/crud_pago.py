@@ -68,6 +68,7 @@ def create_pago(db: Session, pago: PagoCreate, usuario_id: int) -> Pago:
             fecha_movimiento=db_pago.fecha_pago,
             tipo_movimiento="Pago",
             referencia_id=db_pago.id,
+            numero_referencia=db_pago.numero_recibo,
             importe=db_pago.monto,
             anulado=False,
             usuario_creador_id=usuario_id

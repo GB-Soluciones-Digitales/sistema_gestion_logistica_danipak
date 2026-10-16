@@ -9,6 +9,11 @@ from app.models.Usuario import Usuario
 
 router = APIRouter(prefix="/pagos", tags=["Pagos"])
 
+@router.get("/ultimo-numero")
+def obtener_ultimo_numero(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    numero = crud_pago.get_ultimo_numero_recibo(db)
+    return {"ultimo_numero": numero}
+
 @router.post("/", response_model=PagoResponse, status_code=status.HTTP_201_CREATED)
 def create_pago(pago_in: PagoCreate, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     pago_existente = crud_pago.get_pago_by_numero_recibo(db, numero_recibo=pago_in.numero_recibo)

@@ -19,6 +19,11 @@ export const pagoService = {
         return response.data;
     },
 
+    getUltimoNumero: async () => {
+        const response = await api.get('/api/pagos/ultimo-numero');
+        return response.data;
+    },
+
     updatePago: async(id, data) => {
         const response = await api.put(`/api/pagos/${id}`, data);
         return response.data;

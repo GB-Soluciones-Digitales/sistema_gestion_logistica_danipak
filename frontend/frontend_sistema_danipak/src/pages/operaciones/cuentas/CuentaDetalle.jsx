@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, DollarSign, ChevronLeft, ChevronRight, Filter, Sheet, X } from 'lucide-react';
 import { toast } from 'sonner';
@@ -172,6 +172,22 @@ export default function CuentaDetalle() {
       monto: parseFloat(formPago.monto)
     });
   };
+
+  useEffect(() => {
+    if (modalPagoOpen) {
+      const fetchNumeroRecibo = async () => {
+        try {
+          const res = await pagoService.getUltimoNumero();
+          setFormPago(prev => ({ ...prev, numero_recibo: res.ultimo_numero }));
+        } catch (error) {
+          console.error("Error al obtener número correlativo", error);
+          toast.error("No se pudo cargar el número de recibo automático.");
+        }
+      };
+      
+      fetchNumeroRecibo();
+    }
+  }, [modalPagoOpen]);
 
   const columnas = [
     { key: 'fecha_movimiento', label: 'Fecha', render: (fila) => new Date(fila.fecha_movimiento).toLocaleDateString('es-AR') },

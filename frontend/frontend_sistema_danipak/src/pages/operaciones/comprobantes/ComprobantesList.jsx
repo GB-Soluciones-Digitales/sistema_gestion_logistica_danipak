@@ -12,7 +12,6 @@ import DataTable from '../../../components/ui/DataTable';
 import Button from '../../../components/ui/Button';
 import { formatDate, formatCurrency } from '../../../utils/formatters';
 import { generarPdfLocal } from '../../../utils/pdfGenerator';
-import { exportarAExcel } from '../../../utils/excelGenerator';
 
 export default function ComprobantesList() {
   const navigate = useNavigate();
@@ -136,37 +135,44 @@ export default function ComprobantesList() {
     anularMutation.mutate(id);
   };
 
-  const handleExportarExcel = async () => {
+  const descargarArchivoBackend = async (urlEndpoint, nombreArchivo) => {
     setIsExporting(true);
     toast.info("Generando archivo Excel...");
     try {
-      const exportData = await comprobantesService.getAll(1, 10000, searchTerm, filtros);
-      const comprobantesExport = exportData.items || [];
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (filtros.tipo) params.append('tipo', filtros.tipo);
+      if (filtros.estado) params.append('estado', filtros.estado);
+      if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+      if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+      if (filtros.cliente_id) params.append('cliente_id', filtros.cliente_id);
+      if (filtros.localidad_id) params.append('localidad_id', filtros.localidad_id);
 
-      const datosFormateados = comprobantesExport.map(comp => {
-        const clienteEncontrado = clientesSelect.find(c => c.id === comp.cliente_remitente_id);
-        const nombreRemitente = clienteEncontrado ? clienteEncontrado.razon_social : `ID: ${comp.cliente_remitente_id}`;
-
-        return {
-          'Fecha Emisión': formatDate(comp.fecha_emision),
-          'Tipo': comp.tipo_comprobante || comp.tipo,
-          'Número': comp.numero_comprobante,
-          'Remitente': nombreRemitente,
-          'Destinatario': comp.nombre_destinatario,
-          'Bultos': comp.cantidad_bultos,
-          'Flete a Cobrar ($)': comp.importe_flete_cobro,
-          'Estado': comp.estado
-        };
-      });
-
-      exportarAExcel(datosFormateados, 'Reporte_Comprobantes', 'Comprobantes');
-
+      const response = await comprobantesService.descargarExcel(`${urlEndpoint}?${params.toString()}`);
+      
+      const url = window.URL.createObjectURL(new Blob([response]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${nombreArchivo}_${new Date().getTime()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      toast.success("Excel descargado correctamente");
     } catch (error) {
-      console.error("Error al preparar datos para Excel", error);
-      toast.error("Ocurrió un error al buscar los datos.");
+      console.error("Error al descargar Excel", error);
+      toast.error("Ocurrió un error o no hay datos para descargar.");
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleExportarGeneral = () => {
+    descargarArchivoBackend('/api/comprobantes/exportar/general', 'Reporte_General');
+  };
+
+  const handleExportarRepresentante = () => {
+    descargarArchivoBackend('/api/comprobantes/exportar/representante', 'Reporte_Representantes');
   };
 
   const columnas = [
@@ -235,15 +241,25 @@ export default function ComprobantesList() {
             />
           </div>
 
-          <div className="flex gap-2 w-full sm:w-auto">
+          <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <Button 
               variant="outline"
-              onClick={handleExportarExcel}
+              onClick={handleExportarGeneral}
               disabled={isExporting || isLoading}
               className="w-full sm:w-auto text-green-700 border-green-200 hover:bg-green-50"
             >
               <Sheet size={18} className="mr-2" />
-              {isExporting ? 'Procesando...' : 'Excel'}
+              {isExporting ? 'Procesando...' : 'General'}
+            </Button>
+            
+            <Button 
+              variant="outline"
+              onClick={handleExportarRepresentante}
+              disabled={isExporting || isLoading}
+              className="w-full sm:w-auto text-blue-700 border-blue-200 hover:bg-blue-50"
+            >
+              <Sheet size={18} className="mr-2" />
+              {isExporting ? 'Procesando...' : 'Representantes'}
             </Button>
             
             <Button 

@@ -11,7 +11,8 @@ class Comprobante(Base):
     fecha_emision = Column(DateTime, nullable=False)
 
     # DATOS DEL REMITENTE
-    cliente_remitente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
+    cliente_remitente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
+    nombre_remitente = Column(String, nullable=False)
     domicilio_remitente = Column(String, nullable=False)
     localidad_remitente_id = Column(Integer, ForeignKey("localidades.id"), nullable=False)
 

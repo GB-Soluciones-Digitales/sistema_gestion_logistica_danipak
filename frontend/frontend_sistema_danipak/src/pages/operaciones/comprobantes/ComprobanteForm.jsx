@@ -28,7 +28,9 @@ export default function ComprobanteForm() {
       estado: 'Emitido',
       tipo: '',
       cantidad_bultos: 1,
-      fecha_emision: new Date().toISOString().split('T')[0] 
+      fecha_emision: new Date().toISOString().split('T')[0],
+      nombre_remitente: '',
+      cliente_remitente_id: null
     }
   });
 
@@ -66,18 +68,14 @@ export default function ComprobanteForm() {
           const comprobante = await comprobantesService.getById(id);
           const formattedDate = comprobante.fecha_emision.split('T')[0];
 
-          const clientesDescargados = resClientes.items || [];
-          const remitenteEncontrado = clientesDescargados.find(c => c.id === comprobante.cliente_remitente_id);
-
           reset({
             ...comprobante,
-            fecha_emision: formattedDate,
-            nombre_remitente: remitenteEncontrado ? remitenteEncontrado.razon_social : (comprobante.nombre_remitente || '')
+            fecha_emision: formattedDate
           });
         }
       } catch (error) {
         toast.error("Error al cargar los datos iniciales.");
-        console.log("Error al cargar los datos", error)
+        console.error("Error al cargar los datos", error);
       } finally {
         setLoadingData(false);
       }
@@ -111,7 +109,7 @@ export default function ComprobanteForm() {
           }
         } catch (error) {
           toast.error("Error al obtener el número correlativo");
-          console.error("Error al obtener el número correlativo", error)
+          console.error("Error al obtener el número correlativo", error);
         } finally {
           setCargandoNumero(false);
         }
@@ -124,16 +122,15 @@ export default function ComprobanteForm() {
   }, [tipoSeleccionado, isEditing, setValue]);
 
   const onSubmit = async (data) => {
-
-    if (!data.cliente_remitente_id) {
-      toast.error("El remitente debe ser un cliente registrado. Seleccionalo de la lista.");
+    if (!data.nombre_remitente || data.nombre_remitente.trim() === '') {
+      toast.error("Debe ingresar al menos el nombre del remitente.");
       return;
     }
 
     try {
       const payload = {
         ...data,
-        cliente_remitente_id: parseInt(data.cliente_remitente_id),
+        cliente_remitente_id: data.cliente_remitente_id ? parseInt(data.cliente_remitente_id) : null,
         localidad_remitente_id: parseInt(data.localidad_remitente_id),
         localidad_destinatario_id: parseInt(data.localidad_destinatario_id),
         cantidad_bultos: parseInt(data.cantidad_bultos),
@@ -203,7 +200,8 @@ export default function ComprobanteForm() {
       }
       
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Ocurrió un error al guardar");
+      console.error("Error completo al guardar:", error);
+      toast.error(error.response?.data?.detail || error.message || "Ocurrió un error al guardar");
     }
   };
 
@@ -298,6 +296,9 @@ export default function ComprobanteForm() {
                         field.onChange(cliente.razon_social);
                         setValue("cliente_remitente_id", cliente.id, { shouldValidate: true });
                         setValue("domicilio_remitente", cliente.direccion || '');
+                        if (cliente.localidad_id) {
+                          setValue("localidad_remitente_id", cliente.localidad_id, { shouldValidate: true });
+                        }
                       }}
                       placeholder="Buscar cliente registrado..."
                     />
@@ -343,6 +344,9 @@ export default function ComprobanteForm() {
                       onSelect={(cliente) => {
                         field.onChange(cliente.razon_social || cliente.nombre_fantasia);
                         setValue("domicilio_destinatario", cliente.direccion || cliente.direccion_fiscal || '');
+                        if (cliente.localidad_id) {
+                          setValue("localidad_destinatario_id", cliente.localidad_id, { shouldValidate: true });
+                        }
                       }}
                       placeholder="Buscar en agenda o escribir..."
                     />

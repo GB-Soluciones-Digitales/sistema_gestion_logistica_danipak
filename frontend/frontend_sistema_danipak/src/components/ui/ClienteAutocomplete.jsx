@@ -24,7 +24,7 @@ export default function ClienteAutocomplete({
 
   const handleInputChange = (e) => {
     const text = e.target.value;
-    onChange(text); // Actualiza el form con texto libre
+    onChange(text);
 
     if (text.length >= 2) {
       const textLower = text.toLowerCase();

@@ -1,6 +1,5 @@
 from datetime import date, datetime, time, timedelta
 from typing import Optional
-from zoneinfo import ZoneInfo
 from sqlalchemy import or_, cast, String
 from sqlalchemy.orm import Session
 
@@ -42,9 +41,8 @@ def get_auditoria_by_registro(db: Session, tabla: str, registro_id: int) -> list
 def create_auditoria_log(db: Session, auditoria: AuditoriaCreate) -> Auditoria:
     auditoria_data = auditoria.model_dump()
 
-    tz_ar = ZoneInfo("America/Argentina/Buenos_Aires")
-    auditoria_data["fecha"] = datetime.now(tz_ar).replace(tzinfo=None)
-    
+    auditoria_data["fecha"] = datetime.utcnow() - timedelta(hours=3)
+
     db_auditoria = Auditoria(**auditoria_data)
     
     db.add(db_auditoria)

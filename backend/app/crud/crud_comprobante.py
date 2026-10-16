@@ -40,8 +40,7 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
     db_comprobante = Comprobante(**comprobante_data, usuario_creador_id=usuario_id)
 
     db.add(db_comprobante)
-    db.commit()
-    db.refresh(db_comprobante)
+    db.flush()
 
     log_data = AuditoriaCreate(
         usuario_id=usuario_id,
@@ -53,6 +52,9 @@ def create_comprobante(db: Session, comprobante: ComprobanteCreate, usuario_id: 
     )
     create_auditoria_log(db, log_data)
 
+    db.commit()
+    db.refresh(db_comprobante)
+    
     return db_comprobante
 
 def get_comprobante_by_id(db: Session, comprobante_id: int) -> Comprobante | None:

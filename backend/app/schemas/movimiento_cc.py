@@ -8,6 +8,7 @@ class MovimientoCCBase(BaseModel):
     fecha_movimiento: datetime
     tipo_movimiento: str
     referencia_id: Optional[int] = None
+    numero_referencia: Optional[str] = None
     importe: Decimal
     anulado: bool = False
     mes_correspondiente: Optional[str] = None

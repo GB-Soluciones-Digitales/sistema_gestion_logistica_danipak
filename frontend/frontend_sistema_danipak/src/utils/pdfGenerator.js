@@ -1,5 +1,5 @@
 import { jsPDF } from 'jspdf';
-import { empresaService } from '../api/empresaService'; //
+import { empresaService } from '../api/empresaService';
 
 const getDatosEmpresa = async () => {
   try {
@@ -19,7 +19,7 @@ const getDatosEmpresa = async () => {
   }
 };
 
-const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
+const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
   const x = 10;
   let y = startY;
 
@@ -29,7 +29,6 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   doc.setFontSize(7);
   doc.text("DOCUMENTO NO VÁLIDO COMO FACTURA", 105, y + 2, { align: "center" });
 
-  // Recuadro principal
   doc.setLineWidth(0.3);
   doc.roundedRect(x, y + 4, 190, 28, 1, 1);
 
@@ -37,8 +36,6 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   doc.setFontSize(18);
   doc.text("EXPRESO", x + 10, y + 14);
   doc.setFontSize(22);
-  
-  // INYECCIÓN DINÁMICA DE EMPRESA
   doc.text(datosEmpresa.nombre, x + 10, y + 22);
   
   doc.setFont("helvetica", "normal");
@@ -46,27 +43,22 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   doc.text(datosEmpresa.telefonos, x + 5, y + 27);
   doc.text(datosEmpresa.direccion, x + 15, y + 31);
 
-  // Recuadro central "X"
   doc.rect(100, y + 12, 10, 10);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
   doc.text("X", 105, y + 19, { align: "center" });
 
-  // Datos derecha (Nro y Fecha)
   doc.setFontSize(12);
   doc.text("COMPROBANTE DE ENVÍO", 120, y + 14);
   doc.setFontSize(11);
   doc.text(`N° ${comprobante.numero_comprobante || 'PENDIENTE'}`, 120, y + 20);
 
   doc.text("Fecha", 120, y + 28);
-  
-  // Extraer fecha segura
   const fecha = comprobante.fecha_emision ? new Date(comprobante.fecha_emision) : new Date();
   const dia = String(fecha.getDate() + 1).padStart(2, '0');
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const anio = String(fecha.getFullYear());
 
-  // Cajas de fecha
   doc.rect(135, y + 24, 10, 6);
   doc.text(dia, 140, y + 28.5, { align: "center" });
   doc.rect(147, y + 24, 10, 6);
@@ -77,18 +69,17 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   // ==========================================
   // 2. CUERPO PRINCIPAL
   // ==========================================
-  y = y + 34; // Bajamos al inicio del cuerpo
-  
-  // Recuadro exterior del cuerpo (95mm de alto)
+  y = y + 34; 
   doc.roundedRect(x, y, 190, 95, 1, 1);
 
-  // --- Fila 1: Remitente ---
+  // Remitente
   doc.setFontSize(9);
   doc.text("Remitente", x + 3, y + 7);
   doc.rect(x + 20, y + 3, 165, 6);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(nombres.cliente || String(comprobante.cliente_remitente_id || ''), x + 22, y + 7.5);
+  const remitenteFinal = comprobante.nombre_remitente || (comprobante.cliente && comprobante.cliente.razon_social) || '';
+  doc.text(remitenteFinal, x + 22, y + 7.5);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
@@ -98,11 +89,12 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
 
   doc.text("Localidad", x + 115, y + 17);
   doc.rect(x + 132, y + 13, 53, 6);
-  doc.text(nombres.locRemitente || String(comprobante.localidad_remitente_id || ''), x + 134, y + 17.5);
+  const locRemitenteFinal = (comprobante.localidad_remitente_rel && comprobante.localidad_remitente_rel.nombre) || '';
+  doc.text(locRemitenteFinal, x + 134, y + 17.5);
 
-  doc.line(x, y + 20, x + 190, y + 20); // Separador horizontal
+  doc.line(x, y + 20, x + 190, y + 20);
 
-  // --- Fila 2: Destinatario ---
+  // Destinatario
   doc.text("Destinatario", x + 3, y + 27);
   doc.rect(x + 22, y + 23, 163, 6);
   doc.setFont("helvetica", "bold");
@@ -117,11 +109,12 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
 
   doc.text("Localidad", x + 115, y + 37);
   doc.rect(x + 132, y + 33, 53, 6);
-  doc.text(nombres.locDestinatario || String(comprobante.localidad_destinatario_id || ''), x + 134, y + 37.5);
+  const locDestFinal = (comprobante.localidad_destinatario_rel && comprobante.localidad_destinatario_rel.nombre) || '';
+  doc.text(locDestFinal, x + 134, y + 37.5);
 
-  doc.line(x, y + 40, x + 190, y + 40); // Separador horizontal
+  doc.line(x, y + 40, x + 190, y + 40);
 
-  // --- Fila 3: Importes y Bultos ---
+  // Importes y Bultos
   doc.line(x + 95, y + 40, x + 95, y + 60);
   doc.line(x + 140, y + 40, x + 140, y + 60);
 
@@ -150,9 +143,9 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   const fcVal = comprobante.importe_flete_cobro ? `$${comprobante.importe_flete_cobro}` : "";
   doc.text(fcVal, x + 165, y + 56, { align: "center" });
 
-  doc.line(x, y + 60, x + 190, y + 60); // Separador horizontal
+  doc.line(x, y + 60, x + 190, y + 60);
 
-  // --- Fila 4: Observaciones ---
+  // Observaciones
   doc.setFont("helvetica", "italic");
   doc.setFontSize(10);
   doc.text("Observaciones", 105, y + 67, { align: "center" });
@@ -163,9 +156,9 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
     doc.text(comprobante.observaciones.substring(0, 100), x + 5, y + 74);
   }
 
-  doc.line(x, y + 79, x + 190, y + 79); // Separador horizontal
+  doc.line(x, y + 79, x + 190, y + 79);
 
-  // --- Fila 5: Firmas ---
+  // Firmas
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.text("DEVOLVER", x + 3, y + 85);
@@ -186,7 +179,7 @@ const dibujarTicket = (doc, startY, comprobante, nombres, datosEmpresa) => {
   doc.setLineDash([], 0); 
 };
 
-export const generarPdfLocal = async (comprobante, nombres = {}) => {
+export const generarPdfLocal = async (comprobante) => {
   const datosEmpresa = await getDatosEmpresa();
 
   const doc = new jsPDF({
@@ -195,17 +188,14 @@ export const generarPdfLocal = async (comprobante, nombres = {}) => {
     format: 'a4'
   });
 
-  // Ticket Original (Mitad superior)
-  dibujarTicket(doc, 10, comprobante, nombres, datosEmpresa);
+  dibujarTicket(doc, 10, comprobante, datosEmpresa);
 
-  // Línea de corte punteada
   doc.setLineDash([2, 2], 0);
   doc.setLineWidth(0.3);
   doc.line(0, 148.5, 210, 148.5);
   doc.setLineDash([], 0);
 
-  // Ticket Duplicado (Mitad inferior)
-  dibujarTicket(doc, 155, comprobante, nombres, datosEmpresa);
+  dibujarTicket(doc, 155, comprobante, datosEmpresa);
 
   return doc.output('blob');
 };

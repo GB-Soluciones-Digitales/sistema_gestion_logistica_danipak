@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch, Controller } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { comprobantesService } from '../../../api/comprobantesService';
 import { localidadService } from '../../../api/localidadService';
@@ -15,6 +16,7 @@ import { generarPdfLocal } from '../../../utils/pdfGenerator';
 export default function ComprobanteForm() {
   const { id } = useParams(); 
   const isEditing = Boolean(id);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   const [localidades, setLocalidades] = useState([]);
@@ -61,7 +63,7 @@ export default function ComprobanteForm() {
           clientesServices.getAll(1, 1000)
         ]);
 
-        setLocalidades(resLocalidades.items || []);
+        setLocalidades((resLocalidades.items || []).filter(l => l.estado === true));
         setClientes(resClientes.items || []);
 
         if (isEditing) {
@@ -142,6 +144,7 @@ export default function ComprobanteForm() {
       if (isEditing) {
         await comprobantesService.updateEstado(id, payload);
         toast.success("Comprobante actualizado exitosamente");
+        queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
         navigate('/comprobantes');
       } else {
         const nuevoComprobante = await comprobantesService.createComprobante(payload);
@@ -195,7 +198,7 @@ export default function ComprobanteForm() {
           console.error("Error al generar PDF automático", pdfError);
           toast.error("El comprobante se creó, pero falló la apertura automática del PDF.");
         }
-
+        queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
         navigate('/comprobantes');
       }
       

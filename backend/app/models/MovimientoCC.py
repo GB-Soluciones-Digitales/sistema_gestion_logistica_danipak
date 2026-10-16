@@ -10,6 +10,7 @@ class MovimientoCC(Base):
     fecha_movimiento = Column(DateTime, nullable=False)
     tipo_movimiento = Column(String, nullable=False)
     referencia_id = Column(Integer, nullable=True)
+    numero_referencia = Column(String, nullable=True)
     importe = Column(DECIMAL, nullable=False) 
     anulado = Column(Boolean, default=False)
     mes_correspondiente = Column(String, nullable=True)

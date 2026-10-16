@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService'; 
@@ -12,6 +13,7 @@ import Input from '../../../components/ui/Input';
 export default function ClienteForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [loadingData, setLoadingData] = useState(true);
   const [localidades, setLocalidades] = useState([]);
@@ -33,7 +35,7 @@ export default function ClienteForm() {
     const fetchData = async () => {
       try {
         const resLocalidades = await localidadService.getAll(1, 1000);
-        setLocalidades(resLocalidades.items || []);
+        setLocalidades((resLocalidades.items || []).filter(l => l.estado === true));
 
         if (isEditing) {
           const data = await clientesServices.getById(id);
@@ -65,6 +67,7 @@ export default function ClienteForm() {
         await clientesServices.createClientes(payload);
         toast.success("Cliente creado exitosamente");
       }
+      queryClient.invalidateQueries({ queryKey: ['clientes'] });
       navigate('/clientes');
     } catch (error) {
       toast.error(error.response?.data?.detail || "Ocurrió un error al guardar");

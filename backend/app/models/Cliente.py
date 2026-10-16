@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean
+from sqlalchemy import Column, ForeignKey, String, Integer, Boolean
 from sqlalchemy.orm import relationship
 from app.db.base import Base 
 
@@ -13,7 +13,9 @@ class Cliente(Base):
     email = Column(String, nullable=True)
     estado = Column(Boolean, default=True, nullable=False)
     tiene_cuenta_corriente = Column(Boolean, default=False, nullable=False)
+    localidad_id = Column(Integer, ForeignKey("localidades.id"), nullable=True)
 
+    localidad = relationship("Localidad", back_populates="cliente")
     comprobantes = relationship("Comprobante", back_populates="cliente")
     facturas = relationship("Factura", back_populates="cliente")
     movimientos_cc = relationship("MovimientoCC", back_populates="cliente")

@@ -9,6 +9,7 @@ class ClienteBase(BaseModel):
     email: Optional[str] = None
     estado: bool = True
     tiene_cuenta_corriente: bool = False
+    localidad_id: Optional[int] = None
 
 class ClienteCreate(ClienteBase):
     pass
@@ -20,6 +21,7 @@ class ClienteUpdate(BaseModel):
     telefono: Optional[str] = None
     email: Optional[str] = None
     estado: Optional[bool] = None
+    localidad_id: Optional[int] = None
 
 class ClienteResponse(ClienteBase):
     id: int

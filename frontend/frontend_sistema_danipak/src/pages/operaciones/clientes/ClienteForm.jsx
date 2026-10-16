@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { clientesServices } from '../../../api/clientesServices';
+import { localidadService } from '../../../api/localidadService'; 
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 
@@ -12,7 +13,8 @@ export default function ClienteForm() {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const navigate = useNavigate();
-  const [loadingData, setLoadingData] = useState(isEditing);
+  const [loadingData, setLoadingData] = useState(true);
+  const [localidades, setLocalidades] = useState([]);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
@@ -22,34 +24,45 @@ export default function ClienteForm() {
       telefono: '',
       email: '',
       estado: true,
-      tiene_cuenta_corriente: false
+      tiene_cuenta_corriente: false,
+      localidad_id: ''
     }
   });
 
   useEffect(() => {
-    if (!isEditing) return;
-    const fetchCliente = async () => {
+    const fetchData = async () => {
       try {
-        const data = await clientesServices.getById(id);
-        reset(data);
+        const resLocalidades = await localidadService.getAll(1, 1000);
+        setLocalidades(resLocalidades.items || []);
+
+        if (isEditing) {
+          const data = await clientesServices.getById(id);
+          reset({
+            ...data,
+            localidad_id: data.localidad_id || ''
+          });
+        }
       } catch (error) {
-        toast.error("Error al cargar el cliente.");
-        console.error("Error al cargar el cliente.", error)
-        navigate('/clientes');
+        toast.error("Error al cargar los datos.");
+        console.error("Error", error);
+        if (isEditing) navigate('/clientes');
       } finally {
         setLoadingData(false);
       }
     };
-    fetchCliente();
+    
+    fetchData();
   }, [id, isEditing, reset, navigate]);
 
   const onSubmit = async (data) => {
     try {
+      const payload = { ...data, localidad_id: data.localidad_id ? parseInt(data.localidad_id) : null };
+      
       if (isEditing) {
-        await clientesServices.updateClientes(id, data);
+        await clientesServices.updateClientes(id, payload);
         toast.success("Cliente actualizado exitosamente");
       } else {
-        await clientesServices.createClientes(data);
+        await clientesServices.createClientes(payload);
         toast.success("Cliente creado exitosamente");
       }
       navigate('/clientes');
@@ -88,12 +101,24 @@ export default function ClienteForm() {
               error={errors.cuit_dni?.message}
               {...register("cuit_dni", { required: "Este campo es obligatorio" })}
             />
-            <div className="md:col-span-2">
-              <Input 
-                label="Dirección"
-                {...register("direccion")}
-              />
+            <Input 
+              label="Dirección"
+              {...register("direccion")}
+            />
+            
+            <div>
+                <label className="block text-sm font-medium text-foreground mb-1">Localidad</label>
+                <select 
+                  {...register("localidad_id")}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Seleccione una localidad...</option>
+                  {localidades.map(l => (
+                    <option key={l.id} value={l.id}>{l.nombre}</option>
+                  ))}
+                </select>
             </div>
+
             <Input 
               label="Teléfono"
               {...register("telefono")}
@@ -105,26 +130,24 @@ export default function ClienteForm() {
             />
           </div>
 
-          {isEditing && (
-            <div className="pt-4 border-t border-border mt-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="checkbox"
-                    {...register("estado")}
-                    className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
-                  />
-                  <span className="text-sm font-medium text-foreground">Cliente Activo</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer mt-2"> 
-                  <input 
-                    type="checkbox"
-                    {...register("tiene_cuenta_corriente")}
-                    className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
-                  />
-                  <span className="text-sm font-medium text-foreground">Tiene Cuenta Corriente</span>
-                </label>
-            </div>
-          )}
+          <div className="pt-4 border-t border-border mt-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox"
+                  {...register("estado")}
+                  className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-foreground">Cliente Activo</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer mt-2"> 
+                <input 
+                  type="checkbox"
+                  {...register("tiene_cuenta_corriente")}
+                  className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
+                />
+                <span className="text-sm font-medium text-foreground">Tiene Cuenta Corriente</span>
+              </label>
+          </div>
         </div>
 
         <div className="flex justify-end gap-3">

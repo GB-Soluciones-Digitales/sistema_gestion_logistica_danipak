@@ -2,6 +2,12 @@ import api from "./axios";
 import { db } from "../db/database"; 
 
 export const comprobantesService = {
+
+    descargarExcel: async (urlCompletada) => {
+        const response = await api.get(urlCompletada, { responseType: 'blob' });
+        return response.data;
+    },
+    
     getUltimoNumero: async () => {
         const response = await api.get('/api/comprobantes/ultimo-numero');
         return response.data; 

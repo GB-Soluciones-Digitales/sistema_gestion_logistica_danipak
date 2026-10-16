@@ -21,6 +21,7 @@ class ClienteUpdate(BaseModel):
     telefono: Optional[str] = None
     email: Optional[str] = None
     estado: Optional[bool] = None
+    tiene_cuenta_corriente: Optional[bool] = None
     localidad_id: Optional[int] = None
 
 class ClienteResponse(ClienteBase):

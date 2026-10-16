@@ -160,8 +160,7 @@ export default function CuentaDetalle() {
     facturaMutation.mutate({
       ...formFactura,
       cliente_id: parseInt(id),
-      importe_total: parseFloat(formFactura.importe_total),
-      numero_referencia: formFactura.numero_factura
+      importe_total: parseFloat(formFactura.importe_total)
     });
   };
 
@@ -170,8 +169,7 @@ export default function CuentaDetalle() {
     pagoMutation.mutate({
       ...formPago,
       cliente_id: parseInt(id),
-      monto: parseFloat(formPago.monto),
-      numero_referencia: formPago.numero_recibo
+      monto: parseFloat(formPago.monto)
     });
   };
 
@@ -193,16 +191,6 @@ export default function CuentaDetalle() {
 
   const columnas = [
     { key: 'fecha_movimiento', label: 'Fecha', render: (fila) => new Date(fila.fecha_movimiento).toLocaleDateString('es-AR') },
-    { key: 'tipo_movimiento', label: 'Tipo', 
-      render: (fila) => (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full 
-            ${fila.tipo_movimiento === 'Factura' ? 'bg-red-100 text-red-700' : 
-              fila.tipo_movimiento === 'Pago' ? 'bg-green-100 text-green-700' : 
-              'bg-blue-100 text-blue-700'}`}>
-            {fila.tipo_movimiento}
-        </span>
-      )
-    },
     { key: 'tipo_movimiento', label: 'Comprobante', 
       render: (fila) => (
         <div className="flex flex-col">

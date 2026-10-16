@@ -73,10 +73,17 @@ export default function CuentasCorrientes() {
     { key: 'telefono', label: 'Teléfono', render: (fila) => fila.telefono || '-' },
     { key: 'saldo_total', label: 'Estado de Cuenta',
       render: (fila) => (
-        <span className={`font-bold ${fila.saldo_total > 0 ? 'text-red-600' : fila.saldo_total < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-          {fila.saldo_total > 0 ? 'Debe: ' : fila.saldo_total < 0 ? 'A favor: ' : 'Al día: '}
-          $ {Math.abs(fila.saldo_total).toLocaleString('es-AR')}
-        </span>
+        <div className="flex flex-col">
+          <span className={`font-bold ${fila.saldo_total > 0 ? 'text-red-600' : fila.saldo_total < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+            {fila.saldo_total > 0 ? 'Debe: ' : fila.saldo_total < 0 ? 'A favor: ' : 'Al día: '}
+            $ {Math.abs(fila.saldo_total).toLocaleString('es-AR')}
+          </span>
+          {fila.saldo_total > 0 && fila.mes_deuda && (
+            <span className="text-[11px] text-red-500 font-medium">
+              Desde: {fila.mes_deuda}
+            </span>
+          )}
+        </div>
       )
     },
     { key: 'acciones', label: 'Acciones',

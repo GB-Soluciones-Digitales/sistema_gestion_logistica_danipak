@@ -9,6 +9,20 @@ from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
 from app.models.Cliente import Cliente
 
+def calcular_mes_mas_antiguo_adeudado(movimientos) -> str | None:
+    facturas = [m for m in movimientos if m.tipo_movimiento == 'Factura' and not m.anulado]
+    total_pagado = sum(float(m.importe) for m in movimientos if m.tipo_movimiento == 'Pago' and not m.anulado)
+    
+    saldo_restante = total_pagado
+    
+    for factura in facturas:
+        if saldo_restante >= float(factura.importe):
+            saldo_restante -= float(factura.importe)
+        else:
+            return factura.mes_correspondiente
+            
+    return None
+
 def get_movimiento_by_id(db: Session, movimiento_id: int) -> MovimientoCC | None:
     return db.query(MovimientoCC).filter(MovimientoCC.id == movimiento_id).first()
 
@@ -52,11 +66,22 @@ def get_resumen_general_cuentas(db: Session) -> list:
             elif tipo == "Pago":
                 saldo -= float(total)
                 
+        mes_deuda = None
+
+        if saldo > 0:
+            movimientos = db.query(MovimientoCC).filter(
+                MovimientoCC.cliente_id == cliente.id,
+                MovimientoCC.anulado == False
+            ).order_by(MovimientoCC.fecha_movimiento.asc()).all()
+            
+            mes_deuda = calcular_mes_mas_antiguo_adeudado(movimientos)
+                
         resultado.append({
             "cliente_id": cliente.id,
             "razon_social": cliente.razon_social,
             "cuit_dni": cliente.cuit_dni,
-            "saldo_total": saldo
+            "saldo_total": saldo,
+            "mes_deuda": mes_deuda
         })
         
     return resultado

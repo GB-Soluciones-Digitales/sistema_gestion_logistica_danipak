@@ -12,6 +12,7 @@ class MovimientoCC(Base):
     referencia_id = Column(Integer, nullable=True)
     importe = Column(DECIMAL, nullable=False) 
     anulado = Column(Boolean, default=False)
+    mes_correspondiente = Column(String, nullable=True)
     usuario_creador_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
     cliente = relationship("Cliente", back_populates="movimientos_cc")

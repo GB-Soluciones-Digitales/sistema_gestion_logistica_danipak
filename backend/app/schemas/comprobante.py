@@ -8,7 +8,8 @@ class ComprobanteBase(BaseModel):
     numero_comprobante: str
     fecha_emision: datetime
     
-    cliente_remitente_id: int
+    cliente_remitente_id: Optional[int] = None
+    nombre_remitente: str
     domicilio_remitente: str
     localidad_remitente_id: int
     

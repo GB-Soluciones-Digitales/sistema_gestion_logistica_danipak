@@ -10,6 +10,7 @@ class MovimientoCCBase(BaseModel):
     referencia_id: Optional[int] = None
     importe: Decimal
     anulado: bool = False
+    mes_correspondiente: Optional[str] = None
 
 class MovimientoCCCreate(MovimientoCCBase):
     pass

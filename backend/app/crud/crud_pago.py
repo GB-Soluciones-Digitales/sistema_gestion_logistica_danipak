@@ -26,6 +26,23 @@ def get_pagos(db: Session, skip: int = 0, limit: int = 50, search: str = None) -
 def get_pago_by_numero_recibo(db: Session, numero_recibo: str) -> Pago | None:
     return db.query(Pago).filter(Pago.numero_recibo == numero_recibo).first()
 
+def get_ultimo_numero_recibo(db: Session) -> str:
+    ultimo_pago = db.query(Pago).order_by(Pago.id.desc()).first()
+    
+    if not ultimo_pago or not ultimo_pago.numero_recibo:
+        return "REC-00000001"
+    
+    try:
+        partes = ultimo_pago.numero_recibo.split('-')
+        if len(partes) == 2:
+            siguiente_numero = int(partes[1]) + 1
+            nuevo_correlativo = str(siguiente_numero).zfill(8)
+            return f"{partes[0]}-{nuevo_correlativo}"
+        else:
+            return "REC-00000001"
+    except Exception:
+        return "REC-00000001"
+    
 def create_pago(db: Session, pago: PagoCreate, usuario_id: int) -> Pago:
     # Convertimos el objeto Pydantic en un diccionario para pasarlo al constructor de Pago. 
     pago_data = pago.model_dump()

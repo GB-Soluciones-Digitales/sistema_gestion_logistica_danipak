@@ -7,8 +7,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { processSyncQueue } from '../../utils/syncManager';
 import { db } from '../../db/database'; 
-import LogoExtendido from '../../assets/logo-extendido.svg';
-import Isotipo from '../../assets/isotipo.svg';
+import LogoExtendido from '../../assets/Expreso_DaniPak_Logo.png';
+import Isotipo from '../../assets/Expreso_DaniPak_Logo_Chico.png';
 
 export default function Layout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -154,7 +154,7 @@ export default function Layout({ children }) {
         className={`fixed inset-y-0 left-0 z-30 w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="hidden md:flex items-center h-16 px-6 border-b border-sidebar-border font-display font-bold text-2xl text-sidebar-primary-foreground">
-          <img src={LogoExtendido} alt="DaniPak Logo" className="h-8" />
+          <img src={LogoExtendido} alt="DaniPak Logo" className="h-16 w-16" />
         </div>
 
         <nav className="flex-1 py-6 overflow-y-auto">

@@ -1,5 +1,15 @@
 import { jsPDF } from 'jspdf';
 import { empresaService } from '../api/empresaService';
+import LogoExtendido from '../../assets/Expreso_DaniPak_Logo.png';
+
+const cargarImagen = (src) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+  });
+};
 
 const getDatosEmpresa = async () => {
   try {
@@ -19,7 +29,7 @@ const getDatosEmpresa = async () => {
   }
 };
 
-const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
+const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   const x = 10;
   let y = startY;
 
@@ -32,21 +42,26 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
   doc.setLineWidth(0.3);
   doc.roundedRect(x, y + 4, 190, 28, 1, 1);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("EXPRESO", x + 10, y + 14);
-  doc.setFontSize(22);
-  doc.text(datosEmpresa.nombre, x + 10, y + 22);
+  // LOGO (Si cargó bien lo dibuja, sino pone el texto)
+  if (logoImg) {
+    doc.addImage(logoImg, 'PNG', x + 5, y + 8, 60, 16);
+  } else {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text(datosEmpresa.nombre, x + 10, y + 22);
+  }
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.text(datosEmpresa.telefonos, x + 5, y + 27);
-  doc.text(datosEmpresa.direccion, x + 15, y + 31);
+  doc.text(datosEmpresa.direccion, x + 5, y + 31);
 
-  doc.rect(100, y + 12, 10, 10);
+  // LA "X" CENTRAL (Con fondo blanco para cortar la línea)
+  doc.setFillColor(255, 255, 255);
+  doc.rect(100, y - 1, 10, 10, 'FD'); 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
-  doc.text("X", 105, y + 19, { align: "center" });
+  doc.text("X", 105, y + 6, { align: "center" });
 
   doc.setFontSize(12);
   doc.text("COMPROBANTE DE ENVÍO", 120, y + 14);
@@ -59,58 +74,47 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
   const mes = String(fecha.getMonth() + 1).padStart(2, '0');
   const anio = String(fecha.getFullYear());
 
-  doc.rect(135, y + 24, 10, 6);
-  doc.text(dia, 140, y + 28.5, { align: "center" });
-  doc.rect(147, y + 24, 10, 6);
-  doc.text(mes, 152, y + 28.5, { align: "center" });
-  doc.rect(159, y + 24, 15, 6);
-  doc.text(anio, 166.5, y + 28.5, { align: "center" });
+  doc.text(`${dia}  /  ${mes}  /  ${anio}`, 140, y + 28);
 
   // ==========================================
-  // 2. CUERPO PRINCIPAL
+  // 2. CUERPO PRINCIPAL (Sin recuadros internos)
   // ==========================================
   y = y + 34; 
   doc.roundedRect(x, y, 190, 95, 1, 1);
 
   // Remitente
   doc.setFontSize(9);
-  doc.text("Remitente", x + 3, y + 7);
-  doc.rect(x + 20, y + 3, 165, 6);
+  doc.text("Remitente:", x + 3, y + 7);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   const remitenteFinal = comprobante.nombre_remitente || (comprobante.cliente && comprobante.cliente.razon_social) || '';
-  doc.text(remitenteFinal, x + 22, y + 7.5);
+  doc.text(remitenteFinal, x + 22, y + 7);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("Domicilio", x + 3, y + 17);
-  doc.rect(x + 20, y + 13, 90, 6);
-  doc.text((comprobante.domicilio_remitente || '').substring(0, 45), x + 22, y + 17.5);
+  doc.text("Domicilio:", x + 3, y + 17);
+  doc.text((comprobante.domicilio_remitente || '').substring(0, 45), x + 20, y + 17);
 
-  doc.text("Localidad", x + 115, y + 17);
-  doc.rect(x + 132, y + 13, 53, 6);
+  doc.text("Localidad:", x + 115, y + 17);
   const locRemitenteFinal = (comprobante.localidad_remitente_rel && comprobante.localidad_remitente_rel.nombre) || '';
-  doc.text(locRemitenteFinal, x + 134, y + 17.5);
+  doc.text(locRemitenteFinal, x + 135, y + 17);
 
   doc.line(x, y + 20, x + 190, y + 20);
 
   // Destinatario
-  doc.text("Destinatario", x + 3, y + 27);
-  doc.rect(x + 22, y + 23, 163, 6);
+  doc.text("Destinatario:", x + 3, y + 27);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(comprobante.nombre_destinatario || '', x + 24, y + 27.5);
+  doc.text(comprobante.nombre_destinatario || '', x + 24, y + 27);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("Domicilio", x + 3, y + 37);
-  doc.rect(x + 20, y + 33, 90, 6);
-  doc.text((comprobante.domicilio_destinatario || '').substring(0, 45), x + 22, y + 37.5);
+  doc.text("Domicilio:", x + 3, y + 37);
+  doc.text((comprobante.domicilio_destinatario || '').substring(0, 45), x + 20, y + 37);
 
-  doc.text("Localidad", x + 115, y + 37);
-  doc.rect(x + 132, y + 33, 53, 6);
+  doc.text("Localidad:", x + 115, y + 37);
   const locDestFinal = (comprobante.localidad_destinatario_rel && comprobante.localidad_destinatario_rel.nombre) || '';
-  doc.text(locDestFinal, x + 134, y + 37.5);
+  doc.text(locDestFinal, x + 135, y + 37);
 
   doc.line(x, y + 40, x + 190, y + 40);
 
@@ -118,29 +122,25 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
   doc.line(x + 95, y + 40, x + 95, y + 60);
   doc.line(x + 140, y + 40, x + 140, y + 60);
 
-  doc.text("Cantidad de bultos", x + 3, y + 47);
-  doc.rect(x + 32, y + 43, 60, 6);
+  doc.text("Cantidad de bultos:", x + 3, y + 47);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(String(comprobante.cantidad_bultos || '0'), x + 34, y + 47.5);
+  doc.text(String(comprobante.cantidad_bultos || '0'), x + 35, y + 47);
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.text("C/R", x + 3, y + 56);
-  doc.rect(x + 12, y + 52, 80, 6);
-  const crVal = comprobante.importe_contra_reembolso ? `$${comprobante.importe_contra_reembolso}` : "";
-  doc.text(crVal, x + 14, y + 56.5);
+  doc.text("C/R:", x + 3, y + 56);
+  const crVal = comprobante.importe_contra_reembolso ? `$${comprobante.importe_contra_reembolso}` : "-";
+  doc.text(crVal, x + 15, y + 56);
 
   doc.text("Flete pago", x + 117.5, y + 47, { align: "center" });
-  doc.rect(x + 100, y + 51, 35, 7);
-  const fpVal = comprobante.importe_flete_pago ? `$${comprobante.importe_flete_pago}` : "";
+  const fpVal = comprobante.importe_flete_pago ? `$${comprobante.importe_flete_pago}` : "-";
   doc.text(fpVal, x + 117.5, y + 56, { align: "center" });
 
   doc.text("Flete a cobrar", x + 165, y + 47, { align: "center" });
-  doc.rect(x + 145, y + 51, 40, 7);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  const fcVal = comprobante.importe_flete_cobro ? `$${comprobante.importe_flete_cobro}` : "";
+  const fcVal = comprobante.importe_flete_cobro ? `$${comprobante.importe_flete_cobro}` : "-";
   doc.text(fcVal, x + 165, y + 56, { align: "center" });
 
   doc.line(x, y + 60, x + 190, y + 60);
@@ -149,7 +149,6 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(10);
   doc.text("Observaciones", 105, y + 67, { align: "center" });
-  doc.rect(x + 3, y + 70, 184, 6);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   if (comprobante.observaciones) {
@@ -181,6 +180,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa) => {
 
 export const generarPdfLocal = async (comprobante) => {
   const datosEmpresa = await getDatosEmpresa();
+  const logoImg = await cargarImagen(LogoExtendido); // Cargamos el logo en memoria
 
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -188,14 +188,14 @@ export const generarPdfLocal = async (comprobante) => {
     format: 'a4'
   });
 
-  dibujarTicket(doc, 10, comprobante, datosEmpresa);
+  dibujarTicket(doc, 10, comprobante, datosEmpresa, logoImg);
 
   doc.setLineDash([2, 2], 0);
   doc.setLineWidth(0.3);
   doc.line(0, 148.5, 210, 148.5);
   doc.setLineDash([], 0);
 
-  dibujarTicket(doc, 155, comprobante, datosEmpresa);
+  dibujarTicket(doc, 155, comprobante, datosEmpresa, logoImg);
 
   return doc.output('blob');
 };

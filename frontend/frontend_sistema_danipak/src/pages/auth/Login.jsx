@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import LogoExtendido from '../../assets/logo-extendido.svg';
+import LogoExtendido from '../../assets/Expreso_DaniPak_Logo.png';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -26,11 +26,8 @@ export default function Login() {
           <img 
             src={LogoExtendido} 
             alt="DaniPak Logo" 
-            className="h-10 mb-4" 
+            className="h-20 mb-4" 
           />
-          <h1 className="text-3xl font-display font-bold text-foreground">
-            Bienvenido
-          </h1>
           <p className="text-muted-foreground mt-2 font-sans">
             Ingresá tus credenciales para acceder al sistema
           </p>

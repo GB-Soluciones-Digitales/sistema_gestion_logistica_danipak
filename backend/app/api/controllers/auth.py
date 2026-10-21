@@ -128,6 +128,6 @@ def restablecer_password(datos: ResetearPassword, db: Session = Depends(get_db))
 
     # la Hasheamos y actualizamos la contraseña
     update_data = UsuarioUpdate(password=datos.nueva_password)
-    update_usuario(db=db, db_usuario=user, usuario_in=update_data)
+    update_usuario(db=db, db_usuario=user, usuario_in=update_data, usuario_id=user.id)
     
     return {"mensaje": "Contraseña actualizada exitosamente"}

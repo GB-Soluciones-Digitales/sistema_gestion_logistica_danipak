@@ -29,4 +29,17 @@ export const usuarioService = {
         const response = await api.put("/api/auth/me/password", data);
         return response.data;
     },
+
+    solicitarRecuperacion: async (email) => {
+        const response = await api.post('/api/auth/olvide-password', { email });
+        return response.data;
+    },
+
+    resetearPassword: async (token, nueva_password) => {
+        const response = await api.post('/api/auth/reset-password', { 
+            token, 
+            nueva_password 
+        });
+        return response.data;
+    }
 }

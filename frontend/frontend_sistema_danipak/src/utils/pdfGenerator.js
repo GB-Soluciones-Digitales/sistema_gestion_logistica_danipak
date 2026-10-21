@@ -1,6 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { empresaService } from '../api/empresaService';
-import LogoExtendido from '../../assets/Expreso_DaniPak_Logo.png';
+import LogoExtendido from '../assets/Expreso_DaniPak_Logo.png';
 
 const cargarImagen = (src) => {
   return new Promise((resolve) => {

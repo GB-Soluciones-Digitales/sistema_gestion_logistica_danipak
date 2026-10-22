@@ -58,10 +58,10 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   // LA "X" CENTRAL 
   doc.setFillColor(255, 255, 255);
-  doc.rect(100, y, 10, 10, 'FD'); 
+  doc.rect(100, y + 5, 10, 10, 'FD'); 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
-  doc.text("X", 105, y + 8.5, { align: "center" });
+  doc.text("X", 105, y + 12, { align: "center" });
 
   doc.setFontSize(12);
   doc.text("COMPROBANTE DE ENVÍO", 120, y + 14);

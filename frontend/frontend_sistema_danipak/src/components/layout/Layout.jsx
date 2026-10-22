@@ -140,7 +140,7 @@ export default function Layout({ children }) {
       
       <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground z-20">
         <div className="font-display font-bold text-xl tracking-tight text-sidebar-primary-foreground">
-          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-24" />
+          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-8" />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

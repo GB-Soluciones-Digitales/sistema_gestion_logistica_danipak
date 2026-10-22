@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../../api/axios';
-import LogoExtendido from '../../assets/logo-extendido.svg';
+import { usuarioService } from '../../api/usuariosService';
+import LogoExtendido from '../../assets/Expreso_DaniPak_Logo.png';
 
 export default function OlvidePassword() {
   const [email, setEmail] = useState('');
@@ -11,11 +11,11 @@ export default function OlvidePassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus('loading');
-    
+
     try {
-      const response = await api.post('/api/auth/olvide-password', { email });
+      const response = await usuarioService.solicitarRecuperacion(email);
       setStatus('success');
-      setMessage(response.data.mensaje);
+      setMessage(response.mensaje || 'Si el correo está registrado, recibirás un enlace.');
     } catch (err) {
       setStatus('error');
       setMessage(err.response?.data?.detail || 'Ocurrió un error al procesar la solicitud.');
@@ -25,12 +25,12 @@ export default function OlvidePassword() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md bg-card rounded-lg shadow-sm border border-border p-8">
-        
+
         <div className="text-center mb-8 flex flex-col items-center">
           <img 
             src={LogoExtendido} 
             alt="DaniPak Logo" 
-            className="h-10 mb-4" 
+            className="h-16 mb-4 object-contain" 
           />
           <h1 className="text-2xl font-display font-bold text-foreground">
             Recuperar Contraseña
@@ -77,7 +77,7 @@ export default function OlvidePassword() {
             <button
               type="submit"
               disabled={status === 'loading'}
-              className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary-hover transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-70 flex justify-center items-center"
+              className="w-full py-2.5 px-4 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-70 flex justify-center items-center"
             >
               {status === 'loading' ? 'Enviando...' : 'Enviar enlace de recuperación'}
             </button>

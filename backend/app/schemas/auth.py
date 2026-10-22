@@ -6,6 +6,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: str | None = None
+    
 class RecuperarPassword(BaseModel):
     email: EmailStr
 

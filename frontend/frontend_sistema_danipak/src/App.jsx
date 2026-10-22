@@ -3,10 +3,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { SessionExpiredModal } from './components/SessionExpiredModal';
 
 import Login from "./pages/auth/Login";
 import OlvidePassword from "./pages/auth/OlvidePassword";
-import { SessionExpiredModal } from './components/SessionExpiredModal';
+import ResetPassword from "./pages/auth/ResetPassword";
+
 import NotFound from "./pages/error/NotFound";
 import ComprobantesList from './pages/operaciones/comprobantes/ComprobantesList';
 import ComprobanteForm from './pages/operaciones/comprobantes/ComprobanteForm';
@@ -49,6 +51,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/olvide-password" element={<OlvidePassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<ComprobantesList />} />

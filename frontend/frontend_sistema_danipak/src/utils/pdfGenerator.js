@@ -42,7 +42,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.setLineWidth(0.3);
   doc.roundedRect(x, y + 4, 190, 28, 1, 1);
 
-  // LOGO (Si cargó bien lo dibuja, sino pone el texto)
+  // LOGO
   if (logoImg) {
     doc.addImage(logoImg, 'PNG', x + 5, y + 8, 60, 16);
   } else {
@@ -56,12 +56,12 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.text(datosEmpresa.telefonos, x + 5, y + 27);
   doc.text(datosEmpresa.direccion, x + 5, y + 31);
 
-  // LA "X" CENTRAL (Con fondo blanco para cortar la línea)
+  // LA "X" CENTRAL 
   doc.setFillColor(255, 255, 255);
-  doc.rect(100, y - 1, 10, 10, 'FD'); 
+  doc.rect(100, y, 10, 10, 'FD'); 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(14);
-  doc.text("X", 105, y + 6, { align: "center" });
+  doc.text("X", 105, y + 8.5, { align: "center" });
 
   doc.setFontSize(12);
   doc.text("COMPROBANTE DE ENVÍO", 120, y + 14);
@@ -180,7 +180,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
 export const generarPdfLocal = async (comprobante) => {
   const datosEmpresa = await getDatosEmpresa();
-  const logoImg = await cargarImagen(LogoExtendido); // Cargamos el logo en memoria
+  const logoImg = await cargarImagen(LogoExtendido); 
 
   const doc = new jsPDF({
     orientation: 'portrait',

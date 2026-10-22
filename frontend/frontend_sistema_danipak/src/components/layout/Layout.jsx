@@ -138,9 +138,9 @@ export default function Layout({ children }) {
   return (
     <div className="h-screen overflow-hidden bg-background flex flex-col md:flex-row font-sans">
       
-      <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground border-b border-sidebar-border z-20">
+      <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground z-20">
         <div className="font-display font-bold text-xl tracking-tight text-sidebar-primary-foreground">
-          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-8" />
+          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-24" />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

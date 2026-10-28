@@ -80,6 +80,7 @@ def get_resumen_general_cuentas(db: Session) -> list:
             "cliente_id": cliente.id,
             "razon_social": cliente.razon_social,
             "cuit_dni": cliente.cuit_dni,
+            "telefono": cliente.telefono,
             "saldo_total": saldo,
             "mes_deuda": mes_deuda
         })

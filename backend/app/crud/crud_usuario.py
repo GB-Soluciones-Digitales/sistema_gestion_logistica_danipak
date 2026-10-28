@@ -74,7 +74,6 @@ def update_usuario(db: Session, db_usuario: Usuario, usuario_in: UsuarioUpdate, 
             setattr(db_usuario, key, value)
             
         db.add(db_usuario)
-        db.commit()
         db.flush()
 
         log_details = {k: v for k, v in update_data.items() if k != "password_hash"}
@@ -91,6 +90,7 @@ def update_usuario(db: Session, db_usuario: Usuario, usuario_in: UsuarioUpdate, 
         )
         create_auditoria_log(db, log_data)
 
+        db.commit()
         db.refresh(db_usuario)
         return db_usuario
     

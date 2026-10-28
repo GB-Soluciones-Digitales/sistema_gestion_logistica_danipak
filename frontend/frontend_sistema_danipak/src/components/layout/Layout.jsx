@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, UserCog, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -43,6 +43,7 @@ export default function Layout({ children }) {
     {
       title: 'SISTEMA',
       items: [
+        { name: 'Usuarios', path: '/usuarios', icon: UserCog },
         { name: 'Configuración', path: '/configuracion', icon: Settings },
       ]
     }

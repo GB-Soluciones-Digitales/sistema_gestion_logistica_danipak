@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from typing import List, Optional
 
 class UsuarioBase(BaseModel):
@@ -8,7 +8,8 @@ class UsuarioBase(BaseModel):
     estado: bool = True
 
 class UsuarioCreate(UsuarioBase):
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=6, max_length=128)
 
 class UsuarioUpdate(BaseModel):
     nombre_completo: Optional[str] = None
@@ -16,6 +17,9 @@ class UsuarioUpdate(BaseModel):
     email: Optional[str] = None
     password: Optional[str] = None
     estado: Optional[bool] = None
+
+class PerfilUpdate(BaseModel):
+    email: EmailStr
 
 class PasswordChange(BaseModel):
     password_actual: str

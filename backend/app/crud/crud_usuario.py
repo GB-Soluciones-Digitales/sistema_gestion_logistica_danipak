@@ -1,6 +1,7 @@
 from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.Usuario import Usuario
@@ -33,6 +34,12 @@ def get_usuarios(db: Session, skip: int = 0, limit: int = 100, search: str = Non
     items = query.offset(skip).limit(limit).all()
     return {"total": total, "items": items}
 
+def _integrity_error_a_http(e: IntegrityError) -> HTTPException:
+    detalle = str(getattr(e, "orig", e)).lower()
+    if "username" in detalle:
+        return HTTPException(status_code=400, detail="El nombre de usuario ya está en uso.")
+    return HTTPException(status_code=400, detail="El correo ya está registrado.")
+
 def create_usuario(db: Session, usuario: UsuarioCreate, usuario_id: int) -> Usuario:
     try:
         usuario_data = usuario.model_dump(exclude={"password"})
@@ -55,7 +62,11 @@ def create_usuario(db: Session, usuario: UsuarioCreate, usuario_id: int) -> Usua
         db.commit()
         db.refresh(db_usuario)
         return db_usuario
-    
+
+    except IntegrityError as e:
+        db.rollback()
+        raise _integrity_error_a_http(e)
+
     except Exception as e:
         db.rollback()
         print(f"Error BD (create_usuario): {str(e)}")

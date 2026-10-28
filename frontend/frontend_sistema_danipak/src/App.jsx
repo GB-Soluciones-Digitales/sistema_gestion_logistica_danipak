@@ -20,6 +20,7 @@ import CuentaDetalle from './pages/operaciones/cuentas/CuentaDetalle';
 import Localidades from "./pages/operaciones/Localidades";
 import Auditoria from './pages/control/auditoria/Auditoria';
 import Reportes from './pages/control/Reportes';
+import Usuarios from './pages/sistema/Usuarios';
 import Configuracion from './pages/sistema/Configuracion';
 
 export default function App() {
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/localidades" element={<Localidades />} />
             <Route path="/auditoria" element={<Auditoria />} />
             <Route path="*" element={<Reportes />} />
+            <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/configuracion" element={<Configuracion />} />
           </Route>
 

@@ -25,6 +25,16 @@ export const usuarioService = {
         return response.data;
     },
 
+    getMe: async () => {
+        const response = await api.get('/api/usuarios/me');
+        return response.data;
+    },
+
+    updateMe: async (data) => {
+        const response = await api.put('/api/usuarios/me', data);
+        return response.data;
+    },
+
     changePassword: async (data) => {
         const response = await api.put("/api/auth/me/password", data);
         return response.data;

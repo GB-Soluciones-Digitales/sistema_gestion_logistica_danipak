@@ -63,6 +63,12 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // No encolamos altas/ediciones de usuarios: guardarían contraseñas en texto plano en IndexedDB
+      if (originalRequest.url.includes('/usuarios')) {
+        toast.error('Esta acción requiere conexión a internet.');
+        return Promise.reject(error);
+      }
+
       if (isWriteRequest) {
         // Parseo seguro con try/catch
         let requestData = error.config.data;

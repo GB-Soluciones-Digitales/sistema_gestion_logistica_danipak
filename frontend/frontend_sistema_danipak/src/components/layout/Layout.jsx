@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, UserCog, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -43,6 +43,7 @@ export default function Layout({ children }) {
     {
       title: 'SISTEMA',
       items: [
+        { name: 'Usuarios', path: '/usuarios', icon: UserCog },
         { name: 'Configuración', path: '/configuracion', icon: Settings },
       ]
     }
@@ -140,7 +141,7 @@ export default function Layout({ children }) {
       
       <header className="md:hidden flex items-center justify-between p-4 bg-sidebar text-sidebar-foreground z-20">
         <div className="font-display font-bold text-xl tracking-tight text-sidebar-primary-foreground">
-          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-24" />
+          <img src={Isotipo} alt="DaniPak Isotipo" className="h-8 w-8" />
         </div>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -151,10 +152,10 @@ export default function Layout({ children }) {
       </header>
 
       <aside 
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-sidebar text-sidebar-foreground flex flex-col transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="hidden md:flex items-center h-16 px-6 border-b border-sidebar-border font-display font-bold text-2xl text-sidebar-primary-foreground">
-          <img src={LogoExtendido} alt="DaniPak Logo" className="h-16 w-16" />
+          <img src={LogoExtendido} alt="DaniPak Logo" className="h-16 w-32" />
         </div>
 
         <nav className="flex-1 py-6 overflow-y-auto">

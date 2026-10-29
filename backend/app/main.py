@@ -13,24 +13,20 @@ app = FastAPI()
 
 @app.on_event("startup")
 def crear_usuario_inicial():
-    from app.models.Usuario import Usuario as ModeloUsuario
-
     db = SessionLocal()
     try:
-        usuario_existente = db.query(ModeloUsuario).filter(ModeloUsuario.username == "brian").first()
-        
-        if not usuario_existente:
-            print("🚀 Creando usuario fundador 'brian'...")
-            nuevo_usuario = ModeloUsuario(
-                nombre_completo="Brian Battauz",
-                username="brian",
-                email="brian_nbattauz@hotmail.com.ar", 
-                password_hash=get_password_hash("Brian1234"),
-                estado=True
-            )
-            db.add(nuevo_usuario)
+        from app.models.Usuario import Usuario as ModeloUsuario
+
+        usuario = db.query(ModeloUsuario).filter(ModeloUsuario.email == "brian_nbattauz@hotmail.com.ar").first()
+        if usuario:
+            print("🔄 Actualizando credenciales del usuario fundador existente...")
+            usuario.username = "brian"
+            usuario.nombre_completo = "Brian Battauz"
+            usuario.password_hash = get_password_hash("123456")
             db.commit()
-            print("✅ ¡Usuario fundador creado con éxito!")
+            print("✅ ¡Usuario fundador actualizado con éxito!")
+        else:
+            print("⚠️ No se encontró el usuario original. Omitiendo actualización para evitar colisión de IDs.")
     except Exception as e:
         print(f"❌ Error al crear el usuario inicial: {e}")
         db.rollback()

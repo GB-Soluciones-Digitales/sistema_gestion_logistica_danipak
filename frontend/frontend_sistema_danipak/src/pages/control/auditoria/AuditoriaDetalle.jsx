@@ -22,7 +22,10 @@ export default function AuditoriaDetalleModal({ item, onClose }) {
                     <div><span className="text-muted-foreground">Fecha: </span>{formatFecha(item.fecha)}</div>
                     <div><span className="text-muted-foreground">Tabla: </span>{item.tabla_afectada}</div>
                     <div><span className="text-muted-foreground">Registro: </span>#{item.registro_id}</div>
-                    <div><span className="text-muted-foreground">Usuario: </span>{item.usuario_id ?? '—'}</div>
+                    <div><span className="text-muted-foreground">Usuario: </span>{item.usuario_nombre ?? '—'}</div>
+                    {item.tabla_afectada === 'clientes' && item.cliente_nombre && (
+                        <div><span className="text-muted-foreground">Cliente: </span>{item.cliente_nombre}</div>
+                    )}
                 </div>
 
                 {rows.length > 0 ? (

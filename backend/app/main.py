@@ -13,13 +13,15 @@ app = FastAPI()
 
 @app.on_event("startup")
 def crear_usuario_inicial():
+    from app.models.Usuario import Usuario as ModeloUsuario
+
     db = SessionLocal()
     try:
-        usuario_existente = db.query(Usuario).filter(Usuario.username == "brian").first()
+        usuario_existente = db.query(ModeloUsuario).filter(ModeloUsuario.username == "brian").first()
         
         if not usuario_existente:
             print("🚀 Creando usuario fundador 'brian'...")
-            nuevo_usuario = Usuario(
+            nuevo_usuario = ModeloUsuario(
                 nombre_completo="Brian Battauz",
                 username="brian",
                 email="brian_nbattauz@hotmail.com.ar", 

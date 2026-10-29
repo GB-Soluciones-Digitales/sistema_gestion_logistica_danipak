@@ -32,6 +32,7 @@ export default function Auditoria() {
         return () => clearTimeout(delayDebounceFn);
     }, [searchTerm]);
 
+    // Solo alimenta el desplegable de filtro por usuario; los nombres de la tabla vienen del backend
     const { data: usuariosData } = useQuery({
         queryKey: ['usuarios'],
         queryFn: () => usuarioService.getAll(),
@@ -68,11 +69,6 @@ export default function Auditoria() {
         setPage(1);
     };
 
-    const nombreUsuario = (id) => {
-        const u = usuarios.find((u) => String(u.id) === String(id));
-        return u ? (u.nombre_completo || u.nombre || u.username || u.email || `Usuario ${id}`) : id ?? '—';
-    };
-
     const traducirAccion = (accion) => {
         if (!accion) return '—';
         const acc = accion.toUpperCase();
@@ -84,7 +80,7 @@ export default function Auditoria() {
 
     const columnas = [
         { key: "fecha", label: "Fecha", render: (row) => formatFecha(row.fecha) },
-        { key: "usuario_id", label: "Usuario", render: (row) => nombreUsuario(row.usuario_id) },
+        { key: "usuario_nombre", label: "Usuario", render: (row) => row.usuario_nombre ?? '—' },
         { key: "accion", label: "Acción", render: (row) => (
             <span className={`px-2 py-1 text-xs font-semibold rounded-full 
                 ${row.accion?.toUpperCase().includes('INSERT') ? 'bg-green-100 text-green-800' : 
@@ -93,7 +89,14 @@ export default function Auditoria() {
                 {traducirAccion(row.accion)}
             </span>
         ) },
-        { key: "tabla_afectada", label: "Sección (Tabla)", render: (row) => <span className="capitalize">{row.tabla_afectada}</span> },
+        { key: "tabla_afectada", label: "Sección (Tabla)", render: (row) => (
+            <div className="flex flex-col">
+                <span className="capitalize">{row.tabla_afectada}</span>
+                {row.tabla_afectada === 'clientes' && row.cliente_nombre && (
+                    <span className="text-xs text-muted-foreground">{row.cliente_nombre}</span>
+                )}
+            </div>
+        ) },
         {
             key: "acciones",
             label: "Acciones",

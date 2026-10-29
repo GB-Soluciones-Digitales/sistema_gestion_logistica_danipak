@@ -15,6 +15,8 @@ class AuditoriaCreate(AuditoriaBase):
 
 class AuditoriaResponse(AuditoriaBase):
     id: int
+    usuario_nombre: Optional[str] = None
+    cliente_nombre: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class AuditoriaPaginatedResponse(BaseModel):

@@ -17,16 +17,15 @@ def crear_usuario_inicial():
     try:
         from app.models.Usuario import Usuario as ModeloUsuario
 
-        usuario = db.query(ModeloUsuario).filter(ModeloUsuario.email == "brian_nbattauz@hotmail.com.ar").first()
-        if usuario:
-            print("🔄 Actualizando credenciales del usuario fundador existente...")
-            usuario.username = "brian"
-            usuario.nombre_completo = "Brian Battauz"
-            usuario.password_hash = get_password_hash("123456")
+        usuario_admin = db.query(ModeloUsuario).filter(ModeloUsuario.id == 1).first()
+        if usuario_admin:
+            print("🔄 Actualizando credenciales del administrador (ID 1)...")
+            usuario_admin.username = "admin"
+            usuario_admin.password_hash = get_password_hash("Admin123")
             db.commit()
-            print("✅ ¡Usuario fundador actualizado con éxito!")
+            print("✅ ¡Usuario 'admin' actualizado con contraseña 'Admin123'!")
         else:
-            print("⚠️ No se encontró el usuario original. Omitiendo actualización para evitar colisión de IDs.")
+            print("⚠️ No se encontró el usuario con ID 1 en la base de datos.")
     except Exception as e:
         print(f"❌ Error al crear el usuario inicial: {e}")
         db.rollback()

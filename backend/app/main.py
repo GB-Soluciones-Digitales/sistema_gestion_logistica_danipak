@@ -6,8 +6,34 @@ from app.core.limiter import limiter
 
 from app.api.controllers import auth, auditoria, clientes, comprobantes, facturas, localidad, movimientos_cc, pagos, usuarios, empresa, reportes
 from app.models import Comprobante, Usuario, Cliente, Localidad, Auditoria, Factura, MovimientoCC, Pago
+from app.db.session import SessionLocal
+from app.core.security import get_password_hash
 
 app = FastAPI()
+
+@app.on_event("startup")
+def crear_usuario_inicial():
+    db = SessionLocal()
+    try:
+        usuario_existente = db.query(Usuario).filter(Usuario.username == "brian").first()
+        
+        if not usuario_existente:
+            print("🚀 Creando usuario fundador 'brian'...")
+            nuevo_usuario = Usuario(
+                nombre_completo="Brian Battauz",
+                username="brian",
+                email="brian_nbattauz@hotmail.com.ar", 
+                password_hash=get_password_hash("Brian1234"),
+                estado=True
+            )
+            db.add(nuevo_usuario)
+            db.commit()
+            print("✅ ¡Usuario fundador creado con éxito!")
+    except Exception as e:
+        print(f"❌ Error al crear el usuario inicial: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)

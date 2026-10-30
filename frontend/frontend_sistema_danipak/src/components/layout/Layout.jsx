@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Wallet, MapPin, ShieldCheck, BarChart3, Settings, UserCog, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
+import { FileText, Users, Wallet, MapPin, ShieldCheck, Settings, UserCog, LogOut, Menu, X, RefreshCw, Wifi, WifiOff, Download, CloudAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -37,13 +37,12 @@ export default function Layout({ children }) {
       title: 'CONTROL',
       items: [
         { name: 'Auditoría', path: '/auditoria', icon: ShieldCheck },
-        { name: 'Reportes', path: '/reportes', icon: BarChart3 },
+        { name: 'Usuarios', path: '/usuarios', icon: UserCog },
       ]
     },
     {
       title: 'SISTEMA',
       items: [
-        { name: 'Usuarios', path: '/usuarios', icon: UserCog },
         { name: 'Configuración', path: '/configuracion', icon: Settings },
       ]
     }

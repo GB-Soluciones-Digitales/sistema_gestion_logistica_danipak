@@ -17,3 +17,4 @@ class Factura(Base):
 
     cliente = relationship("Cliente", back_populates="facturas")
     usuario = relationship("Usuario", back_populates="facturas")
+    pagos = relationship("Pago", secondary="pagos_facturas", back_populates="facturas")

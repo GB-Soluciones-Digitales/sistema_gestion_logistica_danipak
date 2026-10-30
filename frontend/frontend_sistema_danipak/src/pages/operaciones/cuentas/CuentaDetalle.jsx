@@ -48,6 +48,7 @@ export default function CuentaDetalle() {
     metodo_pago: 'Efectivo',
     fecha_pago: new Date().toISOString().split('T')[0]
   });
+  const [facturasSeleccionadas, setFacturasSeleccionadas] = useState([]);
 
   const { data: resumen = { saldo_total: 0, cantidad_movimientos: 0, razon_social: 'Cargando...' }, isLoading: loadingResumen } = useQuery({
     queryKey: ['cuenta-resumen', id],
@@ -57,6 +58,12 @@ export default function CuentaDetalle() {
   const { data: movimientosData, isLoading: loadingMovimientos } = useQuery({
     queryKey: ['cuenta-movimientos', id, page, limit, filtros],
     queryFn: () => movimientosService.getAllByCliente(id, page, limit, null, filtros),
+  });
+
+  const { data: facturasImpagas = [], isLoading: loadingImpagas } = useQuery({
+    queryKey: ['facturas-impagas', id],
+    queryFn: () => facturaService.getImpagas(id),
+    enabled: modalPagoOpen,
   });
 
   const movimientos = movimientosData?.items || [];
@@ -110,6 +117,8 @@ export default function CuentaDetalle() {
 
       setModalPagoOpen(false);
       setFormPago({ numero_recibo: '', monto: '', metodo_pago: 'Efectivo', fecha_pago: new Date().toISOString().split('T')[0] });
+      setFacturasSeleccionadas([]);
+      queryClient.invalidateQueries({ queryKey: ['facturas-impagas', id] });
       
       queryClient.invalidateQueries({ queryKey: ['cuenta-resumen', id] });
       queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos', id] });
@@ -166,12 +175,37 @@ export default function CuentaDetalle() {
     });
   };
 
+  const cerrarModalPago = () => {
+    setModalPagoOpen(false);
+    setFacturasSeleccionadas([]);
+    setFormPago(prev => ({ ...prev, monto: '' }));
+  };
+
+  const handleToggleFactura = (factura) => {
+    const yaEstaba = facturasSeleccionadas.includes(factura.id);
+    const nuevas = yaEstaba
+      ? facturasSeleccionadas.filter(fid => fid !== factura.id)
+      : [...facturasSeleccionadas, factura.id];
+    setFacturasSeleccionadas(nuevas);
+
+    // El monto se sugiere como la suma de las facturas tildadas (sigue siendo editable).
+    const total = facturasImpagas
+      .filter(f => nuevas.includes(f.id))
+      .reduce((acc, f) => acc + Number(f.importe_total), 0);
+    setFormPago(prev => ({ ...prev, monto: nuevas.length ? total.toFixed(2) : '' }));
+  };
+
+  const totalFacturasSeleccionadas = facturasImpagas
+    .filter(f => facturasSeleccionadas.includes(f.id))
+    .reduce((acc, f) => acc + Number(f.importe_total), 0);
+
   const handleSubmitPago = (e) => {
     e.preventDefault();
     pagoMutation.mutate({
       ...formPago,
       cliente_id: parseInt(id),
-      monto: parseFloat(formPago.monto)
+      monto: parseFloat(formPago.monto),
+      facturas_ids: facturasSeleccionadas
     });
   };
 
@@ -367,9 +401,42 @@ export default function CuentaDetalle() {
         </form>
       </Modal>
 
-      <Modal isOpen={modalPagoOpen} onClose={() => setModalPagoOpen(false)} title="Registrar Pago">
+      <Modal isOpen={modalPagoOpen} onClose={cerrarModalPago} title="Registrar Pago">
         <form onSubmit={handleSubmitPago} className="space-y-4">
           <Input label="Número de Recibo interno" required placeholder="Ej: REC-001" value={formPago.numero_recibo} onChange={(e) => setFormPago({...formPago, numero_recibo: e.target.value})} />
+          <div>
+            <label className="text-sm font-medium text-foreground mb-1 block">Facturas que cancela (opcional)</label>
+            <div className="max-h-48 overflow-y-auto rounded-md border border-input divide-y divide-border">
+              {loadingImpagas ? (
+                <p className="p-3 text-sm text-muted-foreground">Cargando facturas...</p>
+              ) : facturasImpagas.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">El cliente no tiene facturas impagas.</p>
+              ) : (
+                facturasImpagas.map(f => (
+                  <label key={f.id} className="flex items-center gap-3 p-2 text-sm cursor-pointer hover:bg-secondary/40">
+                    <input
+                      type="checkbox"
+                      checked={facturasSeleccionadas.includes(f.id)}
+                      onChange={() => handleToggleFactura(f)}
+                    />
+                    <span className="flex-1">
+                      <span className="font-medium">N° {f.numero_factura}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {f.mes_correspondiente} · {new Date(f.fecha).toLocaleDateString('es-AR')}
+                      </span>
+                    </span>
+                    <span className="font-medium">$ {Number(f.importe_total).toLocaleString('es-AR')}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            {facturasSeleccionadas.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {facturasSeleccionadas.length} seleccionada(s) · Total: $ {totalFacturasSeleccionadas.toLocaleString('es-AR')}
+              </p>
+            )}
+          </div>
+
           <Input type="number" step="0.01" label="Monto a favor ($)" required placeholder="0.00" value={formPago.monto} onChange={(e) => setFormPago({...formPago, monto: e.target.value})} />
           
           <div>
@@ -388,7 +455,7 @@ export default function CuentaDetalle() {
           <Input type="date" label="Fecha de Pago" required value={formPago.fecha_pago} onChange={(e) => setFormPago({...formPago, fecha_pago: e.target.value})} />
           
           <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
-            <Button type="button" variant="outline" onClick={() => setModalPagoOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={cerrarModalPago}>Cancelar</Button>
             <Button type="submit" disabled={pagoMutation.isPending} className="bg-green-600 hover:bg-green-700 text-white border-transparent">
               {pagoMutation.isPending ? 'Registrando...' : 'Confirmar Pago'}
             </Button>

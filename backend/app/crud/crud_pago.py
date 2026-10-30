@@ -7,6 +7,7 @@ from app.schemas.pago import PagoCreate, PagoUpdate
 from app.schemas.auditoria import AuditoriaCreate
 from app.crud.crud_auditoria import create_auditoria_log
 from app.models.MovimientoCC import MovimientoCC
+from app.models.Factura import Factura
 
 # Lauti te lo explico aca en pagos pero aplica para todos los cruds.
 def get_pago_by_id(db: Session, pago_id: int) -> Pago | None:
@@ -45,11 +46,26 @@ def get_ultimo_numero_recibo(db: Session) -> str:
     
 def create_pago(db: Session, pago: PagoCreate, usuario_id: int) -> Pago:
     # Convertimos el objeto Pydantic en un diccionario para pasarlo al constructor de Pago. 
-    pago_data = pago.model_dump()
+    pago_data = pago.model_dump(exclude={"facturas_ids"})
     pago_data_json = pago.model_dump(exclude_unset=True, mode='json')
+
+    facturas = []
+    if pago.facturas_ids:
+        ids_unicos = set(pago.facturas_ids)
+        facturas = db.query(Factura).filter(Factura.id.in_(ids_unicos)).all()
+        if len(facturas) != len(ids_unicos):
+            raise HTTPException(status_code=404, detail="Alguna de las facturas seleccionadas no existe.")
+        for f in facturas:
+            if f.cliente_id != pago.cliente_id:
+                raise HTTPException(status_code=400, detail=f"La factura {f.numero_factura} no pertenece al cliente del pago.")
+            if f.estado != "pendiente":
+                raise HTTPException(status_code=400, detail=f"La factura {f.numero_factura} ya se encuentra cancelada.")
 
     try:
         db_pago = Pago(**pago_data, usuario_creador_id=usuario_id)
+        for f in facturas:
+            f.estado = "pagada"
+        db_pago.facturas = facturas
         db.add(db_pago)
         db.flush()
 
@@ -122,6 +138,8 @@ def anular_pago(db: Session, pago_id: int, usuario_id: int) -> Pago | None:
 
     try:
         db_pago.anulado = True
+        for f in db_pago.facturas:
+            f.estado = "pendiente"
         db.add(db_pago)
         db.flush()
 

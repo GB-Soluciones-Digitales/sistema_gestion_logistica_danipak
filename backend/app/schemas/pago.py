@@ -13,15 +13,22 @@ class PagoBase(BaseModel):
     anulado: bool = False
 
 class PagoCreate(PagoBase):
-    pass
+    facturas_ids: List[int] = []
 
 class PagoUpdate(BaseModel):
     url_respaldo_pdf: Optional[str] = None
     anulado: Optional[bool] = None
 
+class PagoFacturaResumen(BaseModel):
+    id: int
+    numero_factura: str
+    importe_total: Decimal
+    model_config = ConfigDict(from_attributes=True)
+
 class PagoResponse(PagoBase):
     id: int
     usuario_creador_id: int
+    facturas: List[PagoFacturaResumen] = []
     model_config = ConfigDict(from_attributes=True)
 
 class PagoPaginatedResponse(BaseModel):

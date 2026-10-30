@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,10 @@ def create_factura(factura_in: FacturaCreate, db: Session = Depends(get_db), cur
 @router.get("/", response_model=FacturaPaginatedResponse)
 def get_facturas(skip: int = 0, limit: int = 100, search: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     return crud_factura.get_facturas(db=db, skip=skip, limit=limit, search=search)
+
+@router.get("/impagas", response_model=List[FacturaResponse])
+def get_facturas_impagas(cliente_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    return crud_factura.get_facturas_impagas(db=db, cliente_id=cliente_id)
 
 @router.get("/{factura_id}", response_model=FacturaResponse)
 def get_factura(factura_id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):

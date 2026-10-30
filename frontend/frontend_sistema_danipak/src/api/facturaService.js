@@ -14,6 +14,11 @@ export const facturaService = {
         return response.data;
     },
 
+    getImpagas: async (clienteId) => {
+        const response = await api.get('/api/facturas/impagas', { params: { cliente_id: clienteId } });
+        return response.data;
+    },
+
     getById: async (id) => {
         const response = await api.get(`/api/facturas/${id}`);
         return response.data;

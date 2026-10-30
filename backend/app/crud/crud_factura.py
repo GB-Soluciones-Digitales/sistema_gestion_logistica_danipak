@@ -15,6 +15,12 @@ def get_factura_by_id(db: Session, factura_id: int) -> Factura | None:
 def get_factura_by_numero(db: Session, numero_factura: str) -> Factura | None:
     return db.query(Factura).filter(Factura.numero_factura == numero_factura).first()
 
+def get_facturas_impagas(db: Session, cliente_id: int) -> list[Factura]:
+    return db.query(Factura).filter(
+        Factura.cliente_id == cliente_id,
+        Factura.estado == "pendiente"
+    ).order_by(Factura.fecha.asc()).all()
+
 def get_facturas(db: Session, skip: int = 0, limit: int = 100, search: str = None, estado: str = None) -> dict:
     query = db.query(Factura)
     if search:

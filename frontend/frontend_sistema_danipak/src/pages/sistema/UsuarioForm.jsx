@@ -5,7 +5,8 @@ import { Eye, EyeOff } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 
-export default function UsuarioForm({ onSubmit, onCancel, isSubmitting }) {
+export default function UsuarioForm({ usuario = null, onSubmit, onCancel, isSubmitting }) {
+  const esEdicion = !!usuario;
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const {
@@ -14,20 +15,32 @@ export default function UsuarioForm({ onSubmit, onCancel, isSubmitting }) {
     watch,
     formState: { errors }
   } = useForm({
-    defaultValues: { nombre_completo: '', username: '', email: '', password: '', confirmar_password: '' }
+    defaultValues: {
+      nombre_completo: usuario?.nombre_completo ?? '',
+      username: usuario?.username ?? '',
+      email: usuario?.email ?? '',
+      password: '',
+      confirmar_password: ''
+    }
   });
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const password = watch('password');
 
   const submit = (data) => {
-    onSubmit({
+    const payload = {
       nombre_completo: data.nombre_completo.trim(),
       username: data.username.trim(),
       email: data.email.trim(),
-      password: data.password,
-      estado: true
-    });
+    };
+    if (esEdicion) {
+      // En edición la contraseña es opcional: si queda vacía no se modifica.
+      if (data.password) payload.password = data.password;
+    } else {
+      payload.password = data.password;
+      payload.estado = true;
+    }
+    onSubmit(payload);
   };
 
   return (
@@ -61,13 +74,13 @@ export default function UsuarioForm({ onSubmit, onCancel, isSubmitting }) {
 
       <div className="relative">
         <Input
-          label="Contraseña *"
+          label={esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña *'}
           type={mostrarPassword ? 'text' : 'password'}
           placeholder="Mínimo 6 caracteres"
           autoComplete="new-password"
           error={errors.password?.message}
           {...register('password', {
-            required: 'La contraseña es obligatoria',
+            required: esEdicion ? false : 'La contraseña es obligatoria',
             minLength: { value: 6, message: 'Mínimo 6 caracteres' }
           })}
         />
@@ -81,13 +94,13 @@ export default function UsuarioForm({ onSubmit, onCancel, isSubmitting }) {
       </div>
 
       <Input
-        label="Confirmar contraseña *"
+        label={esEdicion ? 'Confirmar nueva contraseña' : 'Confirmar contraseña *'}
         type={mostrarPassword ? 'text' : 'password'}
         placeholder="Repita la contraseña"
         autoComplete="new-password"
         error={errors.confirmar_password?.message}
         {...register('confirmar_password', {
-          required: 'Requerida',
+          required: esEdicion ? false : 'Requerida',
           validate: (value) => value === password || 'Las contraseñas no coinciden'
         })}
       />
@@ -97,7 +110,7 @@ export default function UsuarioForm({ onSubmit, onCancel, isSubmitting }) {
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creando...' : 'Crear Usuario'}
+          {isSubmitting ? 'Guardando...' : esEdicion ? 'Guardar Cambios' : 'Crear Usuario'}
         </Button>
       </div>
     </form>

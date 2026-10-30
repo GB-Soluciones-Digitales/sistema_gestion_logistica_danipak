@@ -58,6 +58,9 @@ def update_usuario(usuario_id: int, usuario_in: UsuarioUpdate, db: Session = Dep
     if not db_usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado.")
     
+    if usuario_in.estado is False and db_usuario.id == current_user.id:
+        raise HTTPException(status_code=400, detail="No podés bloquear tu propio usuario.")
+
     # Si el usuario intenta cambiar su email o username, deberíamos validar que no elija uno de otro usuario
     if usuario_in.email and usuario_in.email != db_usuario.email:
         if crud_usuario.get_usuario_by_email(db, email=usuario_in.email):

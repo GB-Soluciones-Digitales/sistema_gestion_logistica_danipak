@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { comprobantesService } from '../../../api/comprobantesService';
 import { localidadService } from '../../../api/localidadService';
 import { clientesServices } from '../../../api/clientesServices';
+import { facturaService } from '../../../api/facturaService';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
 import ClienteAutocomplete from '../../../components/ui/ClienteAutocomplete';
@@ -32,7 +33,9 @@ export default function ComprobanteForm() {
       cantidad_bultos: 1,
       fecha_emision: new Date().toISOString().split('T')[0],
       nombre_remitente: '',
-      cliente_remitente_id: null
+      cliente_remitente_id: null,
+      factura_cliente_id: null,
+      factura_cliente_nombre: ''
     }
   });
 
@@ -40,6 +43,14 @@ export default function ComprobanteForm() {
     control,
     name: "tipo"
   });
+
+  const esFactura = tipoSeleccionado === "Factura";
+
+  const facturaClienteId = useWatch({
+    control,
+    name: "factura_cliente_id"
+  });
+  const clienteFactura = clientes.find(c => c.id === facturaClienteId);
 
   useEffect(() => {
     const handleOnline = () => setIsOffline(false);
@@ -115,7 +126,7 @@ export default function ComprobanteForm() {
         } finally {
           setCargandoNumero(false);
         }
-      } else if (tipoSeleccionado === "Remito") {
+      } else if (tipoSeleccionado === "Remito" || tipoSeleccionado === "Factura") {
         setValue("numero_comprobante", "");
       }
     };
@@ -123,7 +134,42 @@ export default function ComprobanteForm() {
     calcularProximoNumero();
   }, [tipoSeleccionado, isEditing, setValue]);
 
+  const onSubmitFactura = async (data) => {
+    if (!data.factura_cliente_id) {
+      toast.error("Seleccione un cliente registrado para la factura.");
+      return;
+    }
+
+    try {
+      await facturaService.createFactura({
+        cliente_id: parseInt(data.factura_cliente_id),
+        numero_factura: data.numero_comprobante,
+        mes_correspondiente: data.mes_correspondiente,
+        fecha: data.fecha_emision,
+        importe_total: parseFloat(data.importe_total),
+        observaciones: data.observaciones || null,
+      });
+
+      toast.success(clienteFactura?.tiene_cuenta_corriente
+        ? "Factura registrada y deuda actualizada en la cuenta corriente"
+        : "Factura registrada como cobrada");
+
+      queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['cuenta-resumen'] });
+      queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos'] });
+      queryClient.invalidateQueries({ queryKey: ['cuentas-corrientes'] });
+      navigate('/comprobantes');
+    } catch (error) {
+      console.error("Error al guardar la factura:", error);
+      toast.error(error.response?.data?.detail || error.message || "Ocurrió un error al guardar la factura");
+    }
+  };
+
   const onSubmit = async (data) => {
+    if (esFactura && !isEditing) {
+      return onSubmitFactura(data);
+    }
+
     if (!data.nombre_remitente || data.nombre_remitente.trim() === '') {
       toast.error("Debe ingresar al menos el nombre del remitente.");
       return;
@@ -247,6 +293,7 @@ export default function ComprobanteForm() {
                 <option value="">Seleccione...</option>
                 <option value="Comprobante de Envío">Comprobante de Envío</option>
                 <option value="Remito">Remito</option>
+                {!isEditing && <option value="Factura">Factura</option>}
               </select>
               {errors.tipo && <span className="text-destructive text-xs mt-1">{errors.tipo.message}</span>}
             </div>
@@ -260,6 +307,9 @@ export default function ComprobanteForm() {
                 className="font-medium disabled:bg-secondary/50"
                 {...register("numero_comprobante", { required: "El número es obligatorio" })}
               />
+              {esFactura && (
+                <p className="text-[10px] text-muted-foreground mt-1 font-medium">Ingrese el número de la factura.</p>
+              )}
               {tipoSeleccionado === "Comprobante de Envío" && (
                 <p className="text-[10px] text-muted-foreground mt-1 font-medium">
                   {isOffline ? 'Sin conexión: Ingrese el número manualmente.' : 'Sugerido automáticamente. Puede editarlo si difiere del talonario.'}
@@ -276,7 +326,61 @@ export default function ComprobanteForm() {
           </div>
         </div>
 
+        {esFactura && (
+          <div className="bg-card p-6 rounded-lg border border-border shadow-sm border-t-4 border-t-primary">
+            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Datos de la Factura</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-3">
+                <label className="block text-sm font-medium text-foreground mb-1">Cliente *</label>
+                <Controller
+                  name="factura_cliente_nombre"
+                  control={control}
+                  rules={{ required: "El cliente es obligatorio" }}
+                  render={({ field }) => (
+                    <ClienteAutocomplete
+                      clientes={clientes}
+                      value={field.value || ''}
+                      onChange={(texto) => {
+                        field.onChange(texto);
+                        setValue("factura_cliente_id", null);
+                      }}
+                      onSelect={(cliente) => {
+                        field.onChange(cliente.razon_social);
+                        setValue("factura_cliente_id", cliente.id);
+                      }}
+                      placeholder="Buscar cliente registrado..."
+                    />
+                  )}
+                />
+                {errors.factura_cliente_nombre && <span className="text-destructive text-xs mt-1 block">{errors.factura_cliente_nombre.message}</span>}
+                {clienteFactura && (
+                  <p className={`text-xs mt-2 font-medium ${clienteFactura.tiene_cuenta_corriente ? 'text-red-600' : 'text-green-700'}`}>
+                    {clienteFactura.tiene_cuenta_corriente
+                      ? 'Cliente con Cuenta Corriente: la factura se suma a su deuda.'
+                      : 'Cliente sin Cuenta Corriente: la factura se registra como cobrada en el momento.'}
+                  </p>
+                )}
+              </div>
+              <Input
+                label="Mes Correspondiente *"
+                placeholder="Ej: Septiembre 2026"
+                error={errors.mes_correspondiente?.message}
+                {...register("mes_correspondiente", { required: "El mes es obligatorio" })}
+              />
+              <Input
+                type="number"
+                step="0.01"
+                label="Importe Total ($) *"
+                placeholder="0.00"
+                error={errors.importe_total?.message}
+                {...register("importe_total", { required: "El importe es obligatorio", min: { value: 0.01, message: "Debe ser mayor a 0" } })}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Origen y Destino */}
+        {!esFactura && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-card p-6 rounded-lg border border-border shadow-sm border-t-4 border-t-primary">
             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Datos del Remitente</h2>
@@ -378,8 +482,10 @@ export default function ComprobanteForm() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Importes */}
+        {!esFactura && (
         <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
           <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-border">Costos y Carga</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -411,6 +517,7 @@ export default function ComprobanteForm() {
             />
           </div>
         </div>
+        )}
 
         {/* Observaciones */}
         <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
@@ -430,7 +537,7 @@ export default function ComprobanteForm() {
           </Button>
           <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
             {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            {isEditing ? 'Guardar Cambios' : 'Generar Comprobante'}
+            {isEditing ? 'Guardar Cambios' : esFactura ? 'Registrar Factura' : 'Generar Comprobante'}
           </Button>
         </div>
       </form>

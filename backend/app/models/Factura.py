@@ -12,6 +12,7 @@ class Factura(Base):
     fecha = Column(DateTime, nullable=False)
     importe_total = Column(DECIMAL, nullable=False)
     observaciones = Column(Text, nullable=True)
+    estado = Column(String, nullable=False, default="pendiente", server_default="pendiente")
     usuario_creador_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
     cliente = relationship("Cliente", back_populates="facturas")

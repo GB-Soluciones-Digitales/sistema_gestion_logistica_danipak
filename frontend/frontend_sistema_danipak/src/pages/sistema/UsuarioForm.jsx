@@ -33,10 +33,7 @@ export default function UsuarioForm({ usuario = null, onSubmit, onCancel, isSubm
       username: data.username.trim(),
       email: data.email.trim(),
     };
-    if (esEdicion) {
-      // En edición la contraseña es opcional: si queda vacía no se modifica.
-      if (data.password) payload.password = data.password;
-    } else {
+    if (!esEdicion) {
       payload.password = data.password;
       payload.estado = true;
     }
@@ -72,38 +69,42 @@ export default function UsuarioForm({ usuario = null, onSubmit, onCancel, isSubm
         })}
       />
 
-      <div className="relative">
+      {!esEdicion && (
+        <>
+        <div className="relative">
+          <Input
+            label={'Contraseña *'}
+            type={mostrarPassword ? 'text' : 'password'}
+            placeholder="Mínimo 6 caracteres"
+            autoComplete="new-password"
+            error={errors.password?.message}
+            {...register('password', {
+              required: 'La contraseña es obligatoria',
+              minLength: { value: 6, message: 'Mínimo 6 caracteres' }
+            })}
+          />
+          <button
+            type="button"
+            onClick={() => setMostrarPassword(!mostrarPassword)}
+            className="absolute right-3 top-[34px] text-muted-foreground hover:text-foreground"
+          >
+            {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+        </div>
+
         <Input
-          label={esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña *'}
+          label={'Confirmar contraseña *'}
           type={mostrarPassword ? 'text' : 'password'}
-          placeholder="Mínimo 6 caracteres"
+          placeholder="Repita la contraseña"
           autoComplete="new-password"
-          error={errors.password?.message}
-          {...register('password', {
-            required: esEdicion ? false : 'La contraseña es obligatoria',
-            minLength: { value: 6, message: 'Mínimo 6 caracteres' }
+          error={errors.confirmar_password?.message}
+          {...register('confirmar_password', {
+            required: 'Requerida',
+            validate: (value) => value === password || 'Las contraseñas no coinciden'
           })}
         />
-        <button
-          type="button"
-          onClick={() => setMostrarPassword(!mostrarPassword)}
-          className="absolute right-3 top-[34px] text-muted-foreground hover:text-foreground"
-        >
-          {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-        </button>
-      </div>
-
-      <Input
-        label={esEdicion ? 'Confirmar nueva contraseña' : 'Confirmar contraseña *'}
-        type={mostrarPassword ? 'text' : 'password'}
-        placeholder="Repita la contraseña"
-        autoComplete="new-password"
-        error={errors.confirmar_password?.message}
-        {...register('confirmar_password', {
-          required: esEdicion ? false : 'Requerida',
-          validate: (value) => value === password || 'Las contraseñas no coinciden'
-        })}
-      />
+        </>
+      )}
 
       <div className="flex justify-end gap-2 pt-4 border-t border-border">
         <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>

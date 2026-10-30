@@ -2,6 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from pwdlib import PasswordHash
 from pwdlib.hashers.bcrypt import BcryptHasher
+import hashlib
+import hmac
 import jwt
 
 from app.core.config import settings
@@ -36,3 +38,28 @@ def create_refresh_token(subject: str | Any) -> str:
     to_encode = {"exp": expire, "sub": str(subject), "type": "refresh"}
     
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+# Huella corta del hash actual: cuando la contraseña cambia, la huella cambia y el token de reseteo deja de servir (un solo uso).
+def _password_fingerprint(password_hash: str) -> str:
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+def create_password_reset_token(user) -> str:
+    expire = datetime.now(timezone.utc) + timedelta(minutes=15)
+    to_encode = {
+        "exp": expire,
+        "sub": str(user.id),
+        "type": "reset",
+        "pwd": _password_fingerprint(user.password_hash),
+    }
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+# Devuelve el usuario si el token es de reseteo, vigente y no fue usado; si no, lanza jwt.PyJWTError.
+def verify_password_reset_token(token: str, user_loader):
+    payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    if payload.get("type") != "reset" or not payload.get("sub"):
+        raise jwt.InvalidTokenError("Token inválido")
+
+    user = user_loader(int(payload["sub"]))
+    if not user or not hmac.compare_digest(payload.get("pwd", ""), _password_fingerprint(user.password_hash)):
+        raise jwt.InvalidTokenError("Token inválido")
+    return user

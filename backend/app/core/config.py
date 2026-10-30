@@ -8,16 +8,14 @@ class Settings:
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 7200))
 
-    # --- EMAIL (SMTP) ---
-    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "")
-    SMTP_PORT: int = int(os.getenv("SMTP_PORT", 587))
-    SMTP_USER: str = os.getenv("SMTP_USER", "")
-    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    # --- EMAIL (Brevo) ---
+    BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
+    MAIL_FROM: str = "sistema.danipak@gmail.com"
 
     # --- ADMINISTRADOR (usuario fundador, ID 1) ---
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
 
     # --- FRONTEND URL ---
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://sistemagestionlogisticadanipak-production.up.railway.app")
 
 settings = Settings()

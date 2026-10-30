@@ -1,12 +1,11 @@
 from fastapi.responses import JSONResponse
 import jwt
-from datetime import timedelta
-from fastapi import APIRouter, Depends, status, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, status, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import create_refresh_token, get_password_hash, verify_password, create_access_token
+from app.core.security import create_refresh_token, verify_password, create_access_token, create_password_reset_token, verify_password_reset_token
 from app.schemas.auth import RecuperarPassword, ResetearPassword, Token
 from app.api.deps import get_db, get_current_user
 from app.crud.crud_usuario import get_usuario_by_email, get_usuario_by_id, get_usuario_by_username, update_usuario
@@ -89,42 +88,36 @@ def refresh_token(request: Request, db: Session = Depends(get_db)):
     new_access_token = create_access_token(subject=user.id)
     return {"access_token": new_access_token, "token_type": "bearer"}
 
-# Se va a implementar cuando se tenga el servicio de correo, mientras queda en pausa.
+# "/olvide-password" se mantiene como alias por retrocompatibilidad.
+@router.post("/forgot-password")
 @router.post("/olvide-password")
-def solicitar_recuperacion(datos: RecuperarPassword, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def solicitar_recuperacion(request: Request, datos: RecuperarPassword, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # Obtenemos el usuario por email
     user = get_usuario_by_email(db, email=datos.email)
 
-    # Si el usuario existe, se enviará un correo de recuperación.
-    if user:
-        expiracion = timedelta(minutes=15)
-        token_recuperacion = create_access_token(
-            subject=user.id, 
-            expires_delta=expiracion
-        )
+    # Si el usuario existe y esta activo, se envia el correo en segundo plano (no bloquea la respuesta).
+    if user and user.estado:
+        token_recuperacion = create_password_reset_token(user)
+        background_tasks.add_task(enviar_email_recuperacion, user.email, token_recuperacion)
 
-        enviar_email_recuperacion(email_destino=user.email, token=token_recuperacion)
-    
     return {"mensaje": "Si el correo está registrado, recibirás un enlace de recuperación."}
 
 @router.post("/reset-password")
 def restablecer_password(datos: ResetearPassword, db: Session = Depends(get_db)):
-    try:
-        # Decodificamos el token para obtener el id del usuario y verificamos que no haya caducado
-        payload = jwt.decode(datos.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id = payload.get("sub")
-        if user_id is None:
-            raise HTTPException(status_code=400, detail="Token inválido")
+    if len(datos.nueva_password) < 6:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 6 caracteres")
 
+    try:
+        # Valida firma, vencimiento, tipo "reset" y que el token no haya sido usado (huella de la contraseña)
+        user = verify_password_reset_token(datos.token, lambda uid: get_usuario_by_id(db, uid))
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=400, detail="El enlace de recuperación ha expirado")
     except jwt.PyJWTError:
-        raise HTTPException(status_code=400, detail="Token inválido")
+        raise HTTPException(status_code=400, detail="El enlace de recuperación es inválido o ya fue utilizado")
 
-    # Buscamos el usuario en la bd y actualizamos su contraseña
-    user = get_usuario_by_id(db, user_id=int(user_id))
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if not user.estado:
+        raise HTTPException(status_code=403, detail="Usuario inactivo")
 
     # la Hasheamos y actualizamos la contraseña
     update_data = UsuarioUpdate(password=datos.nueva_password)

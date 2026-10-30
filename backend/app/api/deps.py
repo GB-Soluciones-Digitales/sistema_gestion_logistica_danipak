@@ -39,6 +39,9 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
+        # El token de recuperación de contraseña no sirve para consumir la API.
+        if payload.get("type") == "reset":
+            raise credentials_exception
     except jwt.PyJWTError:
         raise credentials_exception
 

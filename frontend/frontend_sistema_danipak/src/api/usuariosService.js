@@ -41,7 +41,7 @@ export const usuarioService = {
     },
 
     solicitarRecuperacion: async (email) => {
-        const response = await api.post('/api/auth/olvide-password', { email });
+        const response = await api.post('/api/auth/forgot-password', { email });
         return response.data;
     },
 

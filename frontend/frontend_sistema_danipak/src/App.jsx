@@ -52,7 +52,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/olvide-password" element={<OlvidePassword />} />
-          <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<ComprobantesList />} />

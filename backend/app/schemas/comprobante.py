@@ -10,11 +10,11 @@ class ComprobanteBase(BaseModel):
     
     cliente_remitente_id: Optional[int] = None
     nombre_remitente: str
-    domicilio_remitente: str
+    domicilio_remitente: Optional[str] = None
     localidad_remitente_id: int
     
     nombre_destinatario: str
-    domicilio_destinatario: str
+    domicilio_destinatario: Optional[str] = None
     localidad_destinatario_id: int
     
     cantidad_bultos: int

@@ -191,7 +191,7 @@ export default function ComprobanteView() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Domicilio</p>
-              <p className="font-medium text-foreground">{comprobante.domicilio_remitente}</p>
+              <p className="font-medium text-foreground">{comprobante.domicilio_remitente || "-"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Localidad</p>
@@ -211,7 +211,7 @@ export default function ComprobanteView() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Domicilio</p>
-              <p className="font-medium text-foreground">{comprobante.domicilio_destinatario}</p>
+              <p className="font-medium text-foreground">{comprobante.domicilio_destinatario || "-"}</p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Localidad</p>

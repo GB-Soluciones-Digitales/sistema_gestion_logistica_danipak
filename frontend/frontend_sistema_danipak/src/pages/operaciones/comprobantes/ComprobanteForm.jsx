@@ -310,9 +310,9 @@ export default function ComprobanteForm() {
                 {errors.nombre_remitente && <span className="text-destructive text-xs mt-1 block">{errors.nombre_remitente.message}</span>}
               </div>
               <Input 
-                label="Domicilio *"
+                label="Domicilio"
                 error={errors.domicilio_remitente?.message}
-                {...register("domicilio_remitente", { required: "Campo obligatorio" })}
+                {...register("domicilio_remitente")}
               />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Localidad *</label>
@@ -358,9 +358,9 @@ export default function ComprobanteForm() {
                 {errors.nombre_destinatario && <span className="text-destructive text-xs mt-1">{errors.nombre_destinatario.message}</span>}
               </div>
               <Input 
-                label="Domicilio *"
+                label="Domicilio"
                 error={errors.domicilio_destinatario?.message}
-                {...register("domicilio_destinatario", { required: "Campo obligatorio" })}
+                {...register("domicilio_destinatario")}
               />
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">Localidad *</label>

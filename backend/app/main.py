@@ -8,6 +8,7 @@ from app.api.controllers import auth, auditoria, clientes, comprobantes, factura
 from app.models import Comprobante, Usuario, Cliente, Localidad, Auditoria, Factura, MovimientoCC, Pago
 from app.db.session import SessionLocal
 from app.core.security import get_password_hash
+from app.core.config import settings
 
 app = FastAPI()
 
@@ -22,6 +23,8 @@ def crear_usuario_inicial():
             print("🔄 Actualizando credenciales del administrador (ID 1)...")
             usuario_admin.username = "admin"
             usuario_admin.password_hash = get_password_hash("Admin123")
+            if settings.ADMIN_EMAIL:
+                usuario_admin.email = settings.ADMIN_EMAIL
             db.commit()
             print("✅ ¡Usuario 'admin' actualizado con contraseña 'Admin123'!")
         else:

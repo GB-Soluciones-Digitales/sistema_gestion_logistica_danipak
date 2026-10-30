@@ -72,6 +72,7 @@ export default function CuentaDetalle() {
       setFormFactura({ numero_factura: '', mes_correspondiente: '', fecha: new Date().toISOString().split('T')[0], importe_total: '', observaciones: '' });
       queryClient.invalidateQueries({ queryKey: ['cuenta-resumen', id] });
       queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos', id] });
+      queryClient.invalidateQueries({ queryKey: ['cuentas-corrientes'] });
     },
     onError: (err) => {
       toast.error(err.response?.data?.detail || "Error al registrar la factura");
@@ -112,6 +113,7 @@ export default function CuentaDetalle() {
       
       queryClient.invalidateQueries({ queryKey: ['cuenta-resumen', id] });
       queryClient.invalidateQueries({ queryKey: ['cuenta-movimientos', id] });
+      queryClient.invalidateQueries({ queryKey: ['cuentas-corrientes'] });
     },
     onError: (err) => {
       toast.error(err.response?.data?.detail || "Error al registrar el pago");

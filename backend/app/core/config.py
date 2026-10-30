@@ -14,6 +14,9 @@ class Settings:
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
 
+    # --- ADMINISTRADOR (usuario fundador, ID 1) ---
+    ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "")
+
     # --- FRONTEND URL ---
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost")
 

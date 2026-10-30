@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Building2, Phone, MapPin, Mail, Save, Loader2, KeyRound, EyeOff, Eye, UserCog } from 'lucide-react';
+import { Building2, Phone, MapPin, Mail, Save, Loader2, KeyRound, EyeOff, Eye } from 'lucide-react';
 
 import { empresaService } from '../../api/empresaService';
 import { usuarioService } from '../../api/usuariosService';
@@ -68,42 +68,6 @@ export default function Configuracion() {
   };
 
   const isSavingEmpresa = createMutation.isPending || updateMutation.isPending;
-
-  // --- Datos personales (email del usuario logueado) ---
-  const { data: miPerfil } = useQuery({
-    queryKey: ['mi-perfil'],
-    queryFn: () => usuarioService.getMe(),
-    retry: false,
-  });
-
-  const {
-    register: registerPerfil,
-    handleSubmit: handleSubmitPerfil,
-    reset: resetPerfil,
-    formState: { errors: errorsPerfil, isDirty: isDirtyPerfil }
-  } = useForm({ defaultValues: { email: '' } });
-
-  useEffect(() => {
-    if (miPerfil) resetPerfil({ email: miPerfil.email });
-  }, [miPerfil, resetPerfil]);
-
-  const perfilMutation = useMutation({
-    mutationFn: (data) => usuarioService.updateMe(data),
-    onSuccess: (usuario) => {
-      toast.success('Correo electrónico actualizado correctamente.');
-      queryClient.setQueryData(['mi-perfil'], usuario);
-      queryClient.invalidateQueries({ queryKey: ['usuarios'] });
-      resetPerfil({ email: usuario.email });
-    },
-    onError: (error) => {
-      const detail = error.response?.data?.detail;
-      toast.error(typeof detail === 'string' ? detail : 'Error al actualizar el correo.');
-    }
-  });
-
-  const onSubmitPerfil = (data) => {
-    perfilMutation.mutate({ email: data.email.trim() });
-  };
 
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
@@ -248,46 +212,6 @@ export default function Configuracion() {
             >
               {isSavingEmpresa ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
               {isSavingEmpresa ? 'Guardando...' : 'Guardar Empresa'}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* TARJETA 2: DATOS PERSONALES */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden mt-8">
-        <div className="p-6 border-b border-border bg-muted/30">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <UserCog size={20} className="text-primary" />
-            Datos Personales
-          </h2>
-        </div>
-
-        <form onSubmit={handleSubmitPerfil(onSubmitPerfil)} className="p-6 space-y-6">
-          <div className="space-y-2 max-w-md">
-            <label className="text-sm font-medium text-foreground">Correo Electrónico <span className="text-destructive">*</span></label>
-            <div className="relative">
-              <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                className={`w-full pl-10 pr-4 py-2 bg-background border rounded-md outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary ${errorsPerfil.email ? 'border-destructive' : 'border-input'}`}
-                {...registerPerfil('email', {
-                  required: 'El correo es obligatorio',
-                  pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Correo inválido' }
-                })}
-              />
-            </div>
-            {errorsPerfil.email && <p className="text-xs text-destructive">{errorsPerfil.email.message}</p>}
-            <p className="text-xs text-muted-foreground">Es el correo donde recibís el enlace de recuperación de contraseña.</p>
-          </div>
-
-          <div className="pt-4 flex justify-end border-t border-border mt-6">
-            <button
-              type="submit"
-              disabled={perfilMutation.isPending || !isDirtyPerfil}
-              className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-md font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {perfilMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              {perfilMutation.isPending ? 'Guardando...' : 'Guardar Correo'}
             </button>
           </div>
         </form>

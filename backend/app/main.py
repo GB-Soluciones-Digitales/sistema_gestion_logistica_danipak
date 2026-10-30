@@ -23,8 +23,6 @@ def crear_usuario_inicial():
             print("🔄 Actualizando credenciales del administrador (ID 1)...")
             usuario_admin.username = "admin"
             usuario_admin.password_hash = get_password_hash("Admin123")
-            if settings.ADMIN_EMAIL:
-                usuario_admin.email = settings.ADMIN_EMAIL
             db.commit()
             print("✅ ¡Usuario 'admin' actualizado con contraseña 'Admin123'!")
         else:

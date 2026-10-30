@@ -10,10 +10,6 @@ router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 @router.post("/", response_model=ClienteResponse, status_code=status.HTTP_201_CREATED)
 def create_cliente(cliente_in: ClienteCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    cliente_existente = crud_cliente.get_cliente_by_cuit(db, cuit_dni=cliente_in.cuit_dni)
-    if cliente_existente:
-        raise HTTPException(status_code=400, detail="El CUIT/DNI ya está registrado en el sistema.")
-    
     return crud_cliente.create_cliente(db=db, cliente=cliente_in, usuario_id=current_user.id)
 
 @router.get("/", response_model=ClientePaginatedResponse)

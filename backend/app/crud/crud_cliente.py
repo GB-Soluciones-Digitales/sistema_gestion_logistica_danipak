@@ -36,9 +36,6 @@ def create_cliente(db: Session, cliente: ClienteCreate, usuario_id: int) -> Clie
 def get_cliente_by_id(db: Session, cliente_id: int) -> Cliente | None:
     return db.query(Cliente).filter(Cliente.id == cliente_id).first()
 
-def get_cliente_by_cuit(db: Session, cuit_dni: str) -> Cliente | None:
-    return db.query(Cliente).filter(Cliente.cuit_dni == cuit_dni).first()
-
 def get_clientes(db: Session, skip: int = 0, limit: int = 100, search: str = None) -> dict:
     query = db.query(Cliente)
     

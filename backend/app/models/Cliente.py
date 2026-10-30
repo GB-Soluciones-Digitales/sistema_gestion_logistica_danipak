@@ -7,7 +7,7 @@ class Cliente(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     razon_social = Column(String, nullable=False, index=True)
-    cuit_dni = Column(String, unique=True, index=True, nullable=False)
+    cuit_dni = Column(String, index=True, nullable=False)
     direccion = Column(String, nullable=True)
     telefono = Column(String, nullable=True)
     email = Column(String, nullable=True)

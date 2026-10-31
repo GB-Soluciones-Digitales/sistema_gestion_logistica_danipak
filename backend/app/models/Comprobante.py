@@ -13,12 +13,12 @@ class Comprobante(Base):
     # DATOS DEL REMITENTE
     cliente_remitente_id = Column(Integer, ForeignKey("clientes.id"), nullable=True)
     nombre_remitente = Column(String, nullable=False)
-    domicilio_remitente = Column(String, nullable=False)
+    domicilio_remitente = Column(String, nullable=True)
     localidad_remitente_id = Column(Integer, ForeignKey("localidades.id"), nullable=False)
 
     # DATOS DEL DESTINATARIO
     nombre_destinatario = Column(String, nullable=False)
-    domicilio_destinatario = Column(String, nullable=False)
+    domicilio_destinatario = Column(String, nullable=True)
     localidad_destinatario_id = Column(Integer, ForeignKey("localidades.id"), nullable=False)
 
     # DETALLES DEL ENVÍO

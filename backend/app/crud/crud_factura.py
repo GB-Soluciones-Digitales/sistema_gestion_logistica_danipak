@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.models.Factura import Factura
+from app.models.Cliente import Cliente
 from app.models.MovimientoCC import MovimientoCC
 from app.schemas.factura import FacturaCreate, FacturaUpdate
 from app.schemas.auditoria import AuditoriaCreate
@@ -13,6 +14,12 @@ def get_factura_by_id(db: Session, factura_id: int) -> Factura | None:
 
 def get_factura_by_numero(db: Session, numero_factura: str) -> Factura | None:
     return db.query(Factura).filter(Factura.numero_factura == numero_factura).first()
+
+def get_facturas_impagas(db: Session, cliente_id: int) -> list[Factura]:
+    return db.query(Factura).filter(
+        Factura.cliente_id == cliente_id,
+        Factura.estado == "pendiente"
+    ).order_by(Factura.fecha.asc()).all()
 
 def get_facturas(db: Session, skip: int = 0, limit: int = 100, search: str = None, estado: str = None) -> dict:
     query = db.query(Factura)
@@ -27,8 +34,16 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
     factura_data = factura.model_dump()
     factura_data_json = factura.model_dump(mode='json')
     
+    cliente = db.query(Cliente).filter(Cliente.id == factura.cliente_id).first()
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado.")
+
+    # Sin cuenta corriente la factura se asume cobrada en el momento: no hay deuda ni movimiento.
+    tiene_cc = bool(cliente.tiene_cuenta_corriente)
+    estado = "pendiente" if tiene_cc else "pagada"
+
     try:
-        db_factura = Factura(**factura_data, usuario_creador_id=usuario_id)
+        db_factura = Factura(**factura_data, estado=estado, usuario_creador_id=usuario_id)
         db.add(db_factura)
         db.flush()
 
@@ -42,19 +57,20 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
         )
         create_auditoria_log(db, log_data)
 
-        db_movimiento = MovimientoCC(
-            cliente_id=db_factura.cliente_id,
-            fecha_movimiento=db_factura.fecha,
-            tipo_movimiento="Factura",
-            referencia_id=db_factura.id,
-            numero_referencia=db_factura.numero_factura,
-            mes_correspondiente=db_factura.mes_correspondiente,
-            importe=db_factura.importe_total,
-            anulado=False,
-            usuario_creador_id=usuario_id
-        )
-        db.add(db_movimiento)
-        db.flush()
+        if tiene_cc:
+            db_movimiento = MovimientoCC(
+                cliente_id=db_factura.cliente_id,
+                fecha_movimiento=db_factura.fecha,
+                tipo_movimiento="Factura",
+                referencia_id=db_factura.id,
+                numero_referencia=db_factura.numero_factura,
+                mes_correspondiente=db_factura.mes_correspondiente,
+                importe=db_factura.importe_total,
+                anulado=False,
+                usuario_creador_id=usuario_id
+            )
+            db.add(db_movimiento)
+            db.flush()
 
         db.commit()
         db.refresh(db_factura)

@@ -1,34 +1,26 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import httpx
 
 from app.core.config import settings
 
-def enviar_email_recuperacion(email_destino: str, token: str):
-    # --- Logica simulada (Mock) ---
-    if not settings.SMTP_USER:
-        link_recuperacion = f"http://localhost/reset-password?token={token}"
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
+
+async def enviar_email_recuperacion(email_destino: str, token: str):
+    link_recuperacion = f"{settings.FRONTEND_URL}/reset-password?token={token}"
+
+    # --- Logica simulada (Mock) para desarrollo sin API key ---
+    if not settings.BREVO_API_KEY:
         print("\n" + "="*40)
         print("MOCK: SIMULACIÓN DE ENVÍO DE EMAIL")
         print(f"Para: {email_destino}\nLink: {link_recuperacion}")
         print("="*40 + "\n")
         return
 
-    # --- Logica real ---
-    link_recuperacion = f"{settings.FRONTEND_URL}/reset-password?token={token}"
-    
-    # Armamos el mensaje con formato HTML
-    mensaje = MIMEMultipart("alternative")
-    mensaje["Subject"] = "Recuperación de contraseña - DaniPak"
-    mensaje["From"] = settings.SMTP_USER
-    mensaje["To"] = email_destino
-
     html = f"""
     <html>
       <body style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color: #2563eb;">DaniPak - Gestión Logística</h2>
         <p>Hola,</p>
-        <p>Recibimos una solicitud para restablecer tu contraseña. Hacé clic en el siguiente botón para crear una nueva:</p>
+        <p>Recibimos una solicitud para restablecer tu contraseña. Hacé clic en el siguiente botón para crear una nueva. El enlace vence en 15 minutos.</p>
         <a href="{link_recuperacion}" style="display: inline-block; padding: 10px 20px; color: white; background-color: #2563eb; text-decoration: none; border-radius: 5px;">
             Restablecer Contraseña
         </a>
@@ -37,17 +29,20 @@ def enviar_email_recuperacion(email_destino: str, token: str):
       </body>
     </html>
     """
-    
-    # Adjuntamos el HTML al correo
-    mensaje.attach(MIMEText(html, "html"))
 
-    # Nos conectamos al servidor SMTP y enviamos
+    headers = {"api-key": settings.BREVO_API_KEY, "Content-Type": "application/json"}
+    payload = {
+        "sender": {"email": settings.MAIL_FROM, "name": "Sistema DaniPak"},
+        "to": [{"email": email_destino}],
+        "subject": "Recuperación de Contraseña",
+        "htmlContent": html,
+    }
+
+    # Los errores se registran y no se propagan: la respuesta del endpoint no debe revelar si el email existe.
     try:
-        server = smtplib.SMTP(settings.SMTP_SERVER, settings.SMTP_PORT)
-        server.starttls()
-        server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_USER, email_destino, mensaje.as_string())
-        server.quit()
+        async with httpx.AsyncClient(timeout=10) as client:
+            response = await client.post(BREVO_URL, headers=headers, json=payload)
+            response.raise_for_status()
         print(f"Correo de recuperación enviado exitosamente a {email_destino}")
     except Exception as e:
         print(f"Error al enviar el correo a {email_destino}: {str(e)}")

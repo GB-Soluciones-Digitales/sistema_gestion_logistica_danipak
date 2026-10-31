@@ -19,6 +19,7 @@ class FacturaUpdate(BaseModel):
 
 class FacturaResponse(FacturaBase):
     id: int
+    estado: str = "pendiente"
     usuario_creador_id: int
     model_config = ConfigDict(from_attributes=True)
 

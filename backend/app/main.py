@@ -20,13 +20,21 @@ def crear_usuario_inicial():
 
         usuario_admin = db.query(ModeloUsuario).filter(ModeloUsuario.id == 1).first()
         if usuario_admin:
-            print("🔄 Actualizando credenciales del administrador (ID 1)...")
-            usuario_admin.username = "admin"
-            usuario_admin.password_hash = get_password_hash("Admin123")
+            # Ya existe: no se toca para no pisar la contraseña en cada reinicio.
+            pass
+        elif db.query(ModeloUsuario).count() == 0:
+            print("🚀 Creando usuario administrador inicial...")
+            db.add(ModeloUsuario(
+                nombre_completo="Administrador",
+                username="admin",
+                email=settings.ADMIN_EMAIL or settings.MAIL_FROM,
+                password_hash=get_password_hash("Admin123"),
+                estado=True
+            ))
             db.commit()
-            print("✅ ¡Usuario 'admin' actualizado con contraseña 'Admin123'!")
+            print("✅ Usuario 'admin' creado.")
         else:
-            print("⚠️ No se encontró el usuario con ID 1 en la base de datos.")
+            print("⚠️ No existe el usuario con ID 1 pero hay otros usuarios. Se omite la creación del administrador.")
     except Exception as e:
         print(f"❌ Error al crear el usuario inicial: {e}")
         db.rollback()
@@ -38,7 +46,8 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 origins = [
     "http://localhost:5173", 
-    "https://discerning-surprise-production-759b.up.railway.app",   
+    "https://discerning-surprise-production-759b.up.railway.app",
+    "https://sistemagestionlogisticadanipak-production.up.railway.app",
 ]
 
 app.add_middleware(

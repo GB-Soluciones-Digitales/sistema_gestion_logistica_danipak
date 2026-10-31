@@ -56,7 +56,9 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   // 2. CUERPO PRINCIPAL
   // ==========================================
   y = y + 34;
-  doc.roundedRect(x, y, 190, 60, 1, 1);
+  const numerosFacturas = (pago.facturas || []).map(f => f.numero_factura);
+  const extra = numerosFacturas.length ? 10 : 0;
+  doc.roundedRect(x, y, 190, 60 + extra, 1, 1);
   
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -74,13 +76,21 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   doc.setFont("helvetica", "normal");
   doc.text(`Abono a cuenta corriente (Método: ${pago.metodo_pago})`, x + 35, y + 39);
 
+  if (numerosFacturas.length) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    const leyenda = doc.splitTextToSize(`Cancela Facturas Nro: ${numerosFacturas.join(', ')}`, 180);
+    doc.text(leyenda.slice(0, 2), x + 5, y + 46);
+    doc.setFontSize(11);
+  }
+
   // Firmas
   doc.setLineDash([2, 2], 0);
-  doc.line(x + 20, y + 50, x + 80, y + 50);
-  doc.text(`Firma ${datosEmpresa.nombre}`, x + 50, y + 55, { align: "center" });
+  doc.line(x + 20, y + 50 + extra, x + 80, y + 50 + extra);
+  doc.text(`Firma ${datosEmpresa.nombre}`, x + 50, y + 55 + extra, { align: "center" });
 
-  doc.line(x + 110, y + 50, x + 170, y + 50);
-  doc.text("Aclaración", x + 140, y + 55, { align: "center" });
+  doc.line(x + 110, y + 50 + extra, x + 170, y + 50 + extra);
+  doc.text("Aclaración", x + 140, y + 55 + extra, { align: "center" });
   doc.setLineDash([], 0);
 };
 

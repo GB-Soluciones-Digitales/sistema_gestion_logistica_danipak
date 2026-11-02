@@ -182,7 +182,47 @@ export default function ComprobantesList() {
     try {
       const comprobanteCompleto = await comprobantesService.getById(item.id);
       
-      const blob = await generarPdfLocal(comprobanteCompleto);
+      // ===============================================
+      // NUEVO: Resolvemos los nombres para el PDF acá
+      // ===============================================
+      let nombreCliente = comprobanteCompleto.nombre_remitente || ""; 
+      let nombreLocRem = "";
+      let nombreLocDest = "";
+
+      const idCliente = comprobanteCompleto.remitente_id || comprobanteCompleto.cliente_remitente_id;
+      const idLocOrigen = comprobanteCompleto.localidad_origen_id || comprobanteCompleto.localidad_remitente_id;
+      const idLocDestino = comprobanteCompleto.localidad_destino_id || comprobanteCompleto.localidad_destinatario_id;
+
+      if (idCliente) {
+        const cEncontrado = clientesSelect.find(c => c.id === idCliente);
+        if (cEncontrado) {
+          nombreCliente = cEncontrado.razon_social || cEncontrado.nombre_fantasia || nombreCliente;
+        }
+      }
+
+      if (idLocOrigen) {
+        const locEncontrada = localidadesSelect.find(l => l.id === idLocOrigen);
+        if (locEncontrada) {
+          nombreLocRem = locEncontrada.nombre;
+        }
+      }
+
+      if (idLocDestino) {
+        const locEncontrada2 = localidadesSelect.find(l => l.id === idLocDestino);
+        if (locEncontrada2) {
+          nombreLocDest = locEncontrada2.nombre;
+        }
+      }
+
+      const nombresResueltos = {
+        cliente: nombreCliente,
+        locRemitente: nombreLocRem,
+        locDestinatario: nombreLocDest
+      };
+      // ===============================================
+      
+      // Ahora pasamos el objeto nombresResueltos al generador
+      const blob = await generarPdfLocal(comprobanteCompleto, nombresResueltos);
       const url = window.URL.createObjectURL(blob);
       const titulo = `Comprobante_${comprobanteCompleto.numero_comprobante || 'Offline'}.pdf`;
 
@@ -213,7 +253,7 @@ export default function ComprobantesList() {
       setDownloadingId(null);
     }
   };
-
+  
   const handleAnular = (item) => {
     setComprobanteAAnular(item);
   };

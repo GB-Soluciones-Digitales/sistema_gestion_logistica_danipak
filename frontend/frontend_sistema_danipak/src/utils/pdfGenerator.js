@@ -52,7 +52,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   }
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(13);
+  doc.setFontSize(11);
   doc.text(datosEmpresa.telefonos, x + 3, y + 22);
   doc.text(datosEmpresa.direccion, x + 3, y + 27);
 
@@ -83,15 +83,15 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.roundedRect(x, y, 190, 95, 1, 1);
 
   // Remitente
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.text("Remitente:", x + 2, y + 6);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(13);
   const remitenteFinal = comprobante.nombre_remitente || (comprobante.cliente && comprobante.cliente.razon_social) || '';
   doc.text(remitenteFinal, x + 26, y + 6);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.text("Domicilio:", x + 2, y + 14);
   doc.text((comprobante.domicilio_remitente || '').substring(0, 45), x + 22, y + 14);
 
@@ -104,11 +104,11 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   // Destinatario
   doc.text("Destinatario:", x + 2, y + 24);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text(comprobante.nombre_destinatario || '', x + 28, y + 24);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.text("Domicilio:", x + 2, y + 32);
   doc.text((comprobante.domicilio_destinatario || '').substring(0, 45), x + 22, y + 32);
 
@@ -124,11 +124,11 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   doc.text("Cantidad bultos:", x + 2, y + 43);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
+  doc.setFontSize(15);
   doc.text(String(comprobante.cantidad_bultos || '0'), x + 35, y + 43);
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text("C/R:", x + 2, y + 51);
   const crVal = comprobante.importe_contra_reembolso ? `$${comprobante.importe_contra_reembolso}` : "-";
   doc.text(crVal, x + 14, y + 51);
@@ -139,7 +139,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   doc.text("Flete a cobrar", x + 165, y + 43, { align: "center" });
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
+  doc.setFontSize(15);
   const fcVal = comprobante.importe_flete_cobro ? `$${comprobante.importe_flete_cobro}` : "-";
   doc.text(fcVal, x + 165, y + 51, { align: "center" });
 
@@ -147,10 +147,10 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   // Observaciones
   doc.setFont("helvetica", "italic");
-  doc.setFontSize(15);
+  doc.setFontSize(13);
   doc.text("Observaciones", 105, y + 61, { align: "center" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   if (comprobante.observaciones) {
     doc.text(comprobante.observaciones.substring(0, 100), x + 2, y + 68);
   }
@@ -159,7 +159,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   // Firmas
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.text("DEVOLVER", x + 2, y + 81);
   doc.text("FIRMADO", x + 2, y + 87);
 

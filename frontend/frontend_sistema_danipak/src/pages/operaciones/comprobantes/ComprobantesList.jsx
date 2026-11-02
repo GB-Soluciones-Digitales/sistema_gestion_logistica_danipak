@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { comprobantesService } from '../../../api/comprobantesService';
-import { facturaService } from '../../../api/facturaService'; // Asegurate de que la ruta sea correcta
+import { facturaService } from '../../../api/facturaService'; 
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -24,7 +24,6 @@ export default function ComprobantesList() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  // Modificamos "tipo" para que sea un array "tipos"
   const [filtros, setFiltros] = useState({ tipos: [], estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
   const [showFilters, setShowFilters] = useState(false);
 
@@ -32,21 +31,21 @@ export default function ComprobantesList() {
     queryKey: ['clientes-select'],
     queryFn: () => clientesServices.getAll(1, 1000),
   });
-  const clientesSelect = clientesData?.items || [];
+  
+  const clientesSelect = useMemo(() => clientesData?.items || [], [clientesData?.items]);
 
   const { data: localidadesData } = useQuery({
     queryKey: ['localidades-select'],
     queryFn: () => localidadService.getAll(1, 1000),
   });
-  const localidadesSelect = localidadesData?.items || [];
+  
+  const localidadesSelect = useMemo(() => localidadesData?.items || [], [localidadesData?.items]);
 
-  // Traemos comprobantes
   const { data: compData, isLoading: isLoadingComp } = useQuery({
-    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros], // Mantenemos las keys originales
-    queryFn: () => comprobantesService.getAll(1, 1000), // Traemos todo para unificar localmente
+    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros],
+    queryFn: () => comprobantesService.getAll(1, 1000),
   });
 
-  // Traemos facturas
   const { data: factData, isLoading: isLoadingFact } = useQuery({
     queryKey: ['facturas-raw'],
     queryFn: () => facturaService.getAll(1, 1000),
@@ -54,7 +53,6 @@ export default function ComprobantesList() {
 
   const isLoading = isLoadingComp || isLoadingFact;
 
-  // Unificación de datos
   const datosUnificadosYFiltrados = useMemo(() => {
     let unificados = [];
 
@@ -63,22 +61,25 @@ export default function ComprobantesList() {
     }
     
     if (factData?.items) {
-      unificados = [...unificados, ...factData.items.map(f => ({
-        ...f,
-        es_factura: true,
-        tipo: 'Factura', // Forzamos el tipo para el filtro y la tabla
-        fecha_emision: f.fecha, // Mapeo de fecha
-        numero_comprobante: f.numero_factura, // Mapeo de número
-        nombre_destinatario: f.cliente?.razon_social || '-', // Mapeo de cliente
-        importe_flete_cobro: f.importe_total, // Mapeo de importe
-        estado: f.estado // pendiente o pagada
-      }))];
+      unificados = [...unificados, ...factData.items.map(f => {
+        const clienteRelacionado = clientesSelect.find(c => c.id === f.cliente_id);
+        const nombreDelCliente = f.cliente?.razon_social || clienteRelacionado?.razon_social || clienteRelacionado?.nombre_fantasia || '-';
+
+        return {
+          ...f,
+          es_factura: true,
+          tipo: 'Factura', 
+          fecha_emision: f.fecha, 
+          numero_comprobante: f.numero_factura, 
+          nombre_destinatario: nombreDelCliente,
+          importe_flete_cobro: f.importe_total, 
+          estado: f.estado 
+        };
+      })];
     }
 
-    // Ordenar por fecha_emision descendente
     unificados.sort((a, b) => new Date(b.fecha_emision) - new Date(a.fecha_emision));
 
-    // Aplicar Filtros Locales
     return unificados.filter(item => {
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -96,11 +97,10 @@ export default function ComprobantesList() {
       if (filtros.fecha_hasta && new Date(item.fecha_emision) > new Date(filtros.fecha_hasta)) return false;
 
       if (filtros.cliente_id) {
-        const itemClienteId = item.es_factura ? item.cliente_id : item.remitente_id; // Remitente_id según comprobante original
+        const itemClienteId = item.es_factura ? item.cliente_id : item.remitente_id;
         if (String(itemClienteId) !== String(filtros.cliente_id)) return false;
       }
       
-      // Filtro de localidad (solo aplica a comprobantes)
       if (filtros.localidad_id && !item.es_factura) {
         if (String(item.localidad_origen_id) !== String(filtros.localidad_id) && String(item.localidad_destino_id) !== String(filtros.localidad_id)) return false;
       }
@@ -108,13 +108,11 @@ export default function ComprobantesList() {
       return true;
     });
 
-  }, [compData, factData, searchTerm, filtros]);
+  }, [compData, factData, searchTerm, filtros, clientesSelect]); 
 
-  // Paginación manual para los datos unificados
   const totalRecords = datosUnificadosYFiltrados.length;
   const totalPages = Math.ceil(totalRecords / limit);
   const comprobantesPaginados = datosUnificadosYFiltrados.slice((currentPage - 1) * limit, currentPage * limit);
-
 
   const anularMutation = useMutation({
     mutationFn: (item) => {
@@ -145,7 +143,6 @@ export default function ComprobantesList() {
     setCurrentPage(1);
   };
 
-  // Checkbox de Tipos
   const toggleTipoFiltro = (tipoAAlternar) => {
     setFiltros(prev => {
       const nuevosTipos = prev.tipos.includes(tipoAAlternar)
@@ -183,7 +180,6 @@ export default function ComprobantesList() {
     toast.info("Generando PDF...");
 
     try {
-      // Hacemos el fetch completo para traer las relaciones (localidad, etc) antes de pasarlo al PDF
       const comprobanteCompleto = await comprobantesService.getById(item.id);
       
       const blob = await generarPdfLocal(comprobanteCompleto);
@@ -234,7 +230,6 @@ export default function ComprobantesList() {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      // Solo pasamos el primer tipo seleccionado al backend si existe (por compatibilidad con exportar)
       if (filtros.tipos.length > 0) params.append('tipo', filtros.tipos[0]); 
       if (filtros.estado) params.append('estado', filtros.estado);
       if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
@@ -326,7 +321,6 @@ export default function ComprobantesList() {
           <p className="text-muted-foreground text-sm mt-1">Gestión de envíos y remitos.</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Botón de recarga manual */}
           <Button variant="outline" onClick={() => {
               queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
               queryClient.invalidateQueries({ queryKey: ['facturas-raw'] });
@@ -399,7 +393,6 @@ export default function ComprobantesList() {
         {showFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
             
-            {/* NUEVO FILTRO MULTIPLE DE TIPO */}
             <div className="flex flex-col col-span-1 sm:col-span-4 bg-secondary/30 p-3 rounded-md border border-border">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-2">Tipos de Documento a Mostrar:</label>
               <div className="flex flex-wrap gap-4">

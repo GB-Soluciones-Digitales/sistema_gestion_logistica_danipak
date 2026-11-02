@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Download, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { comprobantesService } from '../../../api/comprobantesService';
+import { facturaService } from '../../../api/facturaService';
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
@@ -13,51 +14,93 @@ import Button from '../../../components/ui/Button';
 export default function ComprobanteView() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   
+  const isFactura = location.pathname.includes('/facturas'); 
+
   const [comprobante, setComprobante] = useState(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [nombres, setNombres] = useState({ cliente: '', locRemitente: '', locDestinatario: '' });
 
   useEffect(() => {
-    const fetchComprobante = async () => {
+    const fetchDocumento = async () => {
       try {
-        const data = await comprobantesService.getById(id);
-        setComprobante(data);
-
-        try {
-          const [clienteData, locRemData, locDestData] = await Promise.all([
-            clientesServices.getById(data.cliente_remitente_id),
-            localidadService.getById(data.localidad_remitente_id),
-            localidadService.getById(data.localidad_destinatario_id)
-          ]);
-
-          setNombres({
-            cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
-            locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
-            locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
+        if (isFactura) {
+          // ==============================
+          // LÓGICA PARA CARGAR FACTURA
+          // ==============================
+          const data = await facturaService.getById(id);
+          
+          // Mapeamos los datos para que la vista los entienda igual que un comprobante
+          setComprobante({
+            ...data,
+            numero_comprobante: data.numero_factura,
+            fecha_emision: data.fecha,
+            tipo: 'Factura',
+            importe_flete_cobro: data.importe_total
           });
-        } catch (err) {
-          console.error("Error al cargar datos vinculados", err);
-          setNombres({
-            cliente: `ID: ${data.cliente_remitente_id}`,
-            locRemitente: `ID: ${data.localidad_remitente_id}`,
-            locDestinatario: `ID: ${data.localidad_destinatario_id}`
-          });
+
+          try {
+            // Buscamos el cliente usando el cliente_id de la factura
+            const clienteData = await clientesServices.getById(data.cliente_id);
+            setNombres({
+              cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_id}`,
+              locRemitente: '-',
+              locDestinatario: '-'
+            });
+          } catch (err) {
+            console.error("Error al cargar cliente de la factura", err);
+            setNombres({ cliente: `ID: ${data.cliente_id}`, locRemitente: '-', locDestinatario: '-' });
+          }
+
+        } else {
+          // ==============================
+          // LÓGICA PARA CARGAR COMPROBANTE (ORIGINAL)
+          // ==============================
+          const data = await comprobantesService.getById(id);
+          setComprobante(data);
+
+          try {
+            const [clienteData, locRemData, locDestData] = await Promise.all([
+              clientesServices.getById(data.cliente_remitente_id),
+              localidadService.getById(data.localidad_remitente_id),
+              localidadService.getById(data.localidad_destinatario_id)
+            ]);
+
+            setNombres({
+              cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
+              locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
+              locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
+            });
+          } catch (err) {
+            console.error("Error al cargar datos vinculados", err);
+            setNombres({
+              cliente: `ID: ${data.cliente_remitente_id}`,
+              locRemitente: `ID: ${data.localidad_remitente_id}`,
+              locDestinatario: `ID: ${data.localidad_destinatario_id}`
+            });
+          }
         }
 
       } catch (error) {
         console.error(error);
-        toast.error("Error al cargar el comprobante.");
+        toast.error(`Error al cargar ${isFactura ? 'la factura' : 'el comprobante'}.`);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchComprobante();
-  }, [id]);
+    fetchDocumento();
+  }, [id, isFactura]);
 
   const handleDescargarPdf = async () => {
+    // Si es factura, atajamos el clic porque el diseño PDF es distinto
+    if (isFactura) {
+      toast.info("Descarga de PDF de Factura en desarrollo");
+      return;
+    }
+
     const pdfWindow = window.open('', '_blank');
     
     if (!pdfWindow) {
@@ -115,7 +158,7 @@ export default function ComprobanteView() {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <AlertCircle className="w-12 h-12 text-destructive" />
-        <h2 className="text-xl font-semibold">Comprobante no encontrado</h2>
+        <h2 className="text-xl font-semibold">Documento no encontrado</h2>
         <button onClick={() => navigate('/comprobantes')} className="text-primary hover:underline">
           Volver al listado
         </button>
@@ -140,11 +183,13 @@ export default function ComprobanteView() {
             <div className="flex items-center gap-2">
               <FileText className="text-primary w-5 h-5" />
               <h1 className="text-xl font-display font-bold text-foreground">
-                Comprobante N° {comprobante.numero_comprobante}
+                {isFactura ? 'Factura' : 'Comprobante'} N° {comprobante.numero_comprobante}
               </h1>
             </div>
             <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-              comprobante.estado === 'Anulado' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+              comprobante.estado === 'Anulado' ? 'bg-red-100 text-red-800' : 
+              comprobante.estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-green-100 text-green-800'
             }`}>
               {comprobante.estado}
             </span>
@@ -172,73 +217,91 @@ export default function ComprobanteView() {
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wider">Tipo</p>
-            <p className="font-medium text-foreground mt-1 uppercase">{comprobante.tipo}</p>
+            <p className={`font-medium mt-1 uppercase ${isFactura ? 'text-indigo-600' : 'text-foreground'}`}>
+              {comprobante.tipo}
+            </p>
           </div>
         </div>
 
         {/* Remitente y Destinatario */}
-        <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x border-border">
+        <div className={`grid grid-cols-1 ${!isFactura ? 'md:grid-cols-2 divide-y md:divide-y-0 md:divide-x' : ''} border-border`}>
           
-          {/* Remitente */}
-          <div className="p-5 space-y-4">
-            <h3 className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary"></div>
-              Datos del Remitente
-            </h3>
-            <div>
-              <p className="text-xs text-muted-foreground">Cliente</p>
-              <p className="font-medium text-foreground">{nombres.cliente}</p>
+          {/* Remitente (Solo se muestra si NO es factura) */}
+          {!isFactura && (
+            <div className="p-5 space-y-4">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary"></div>
+                Datos del Remitente
+              </h3>
+              <div>
+                <p className="text-xs text-muted-foreground">Cliente</p>
+                <p className="font-medium text-foreground">{nombres.cliente}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Domicilio</p>
+                <p className="font-medium text-foreground">{comprobante.domicilio_remitente || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Localidad</p>
+                <p className="font-medium text-foreground">{nombres.locRemitente}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Domicilio</p>
-              <p className="font-medium text-foreground">{comprobante.domicilio_remitente || "-"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Localidad</p>
-              <p className="font-medium text-foreground">{nombres.locRemitente}</p>
-            </div>
-          </div>
+          )}
 
-          {/* Destinatario */}
+          {/* Destinatario / Cliente */}
           <div className="p-5 space-y-4">
             <h3 className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-accent-foreground"></div>
-              Datos del Destinatario
+              {isFactura ? 'Datos del Cliente (Destinatario)' : 'Datos del Destinatario'}
             </h3>
             <div>
-              <p className="text-xs text-muted-foreground">Nombre</p>
-              <p className="font-medium text-foreground">{comprobante.nombre_destinatario}</p>
+              <p className="text-xs text-muted-foreground">{isFactura ? 'Razón Social / Nombre' : 'Nombre'}</p>
+              <p className="font-medium text-foreground">
+                {isFactura ? nombres.cliente : comprobante.nombre_destinatario}
+              </p>
             </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Domicilio</p>
-              <p className="font-medium text-foreground">{comprobante.domicilio_destinatario || "-"}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Localidad</p>
-              <p className="font-medium text-foreground">{nombres.locDestinatario}</p>
-            </div>
+            {!isFactura && (
+              <>
+                <div>
+                  <p className="text-xs text-muted-foreground">Domicilio</p>
+                  <p className="font-medium text-foreground">{comprobante.domicilio_destinatario || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Localidad</p>
+                  <p className="font-medium text-foreground">{nombres.locDestinatario}</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Importes y Bultos */}
         <div className="p-5 border-t border-border bg-secondary/10">
-          <h3 className="text-sm font-bold text-muted-foreground uppercase mb-4">Detalles del Envío</h3>
+          <h3 className="text-sm font-bold text-muted-foreground uppercase mb-4">
+            {isFactura ? 'Detalle de Facturación' : 'Detalles del Envío'}
+          </h3>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="bg-background p-3 rounded-md border border-border">
-              <p className="text-xs text-muted-foreground">Bultos</p>
-              <p className="text-lg font-bold text-foreground mt-1">{comprobante.cantidad_bultos}</p>
-            </div>
-            <div className="bg-background p-3 rounded-md border border-border">
-              <p className="text-xs text-muted-foreground">C/R</p>
-              <p className="text-lg font-bold text-foreground mt-1">{formatCurrency(comprobante.importe_contra_reembolso)}</p>
-            </div>
-            <div className="bg-background p-3 rounded-md border border-border">
-              <p className="text-xs text-muted-foreground">Flete Pago</p>
-              <p className="text-lg font-bold text-foreground mt-1">{formatCurrency(comprobante.importe_flete_pago)}</p>
-            </div>
-            <div className="bg-background p-3 rounded-md border border-border border-l-4 border-l-primary">
-              <p className="text-xs text-muted-foreground">Flete a Cobrar</p>
+          <div className={`grid grid-cols-2 ${isFactura ? 'md:grid-cols-1' : 'md:grid-cols-4'} gap-6`}>
+            
+            {!isFactura && (
+              <>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-xs text-muted-foreground">Bultos</p>
+                  <p className="text-lg font-bold text-foreground mt-1">{comprobante.cantidad_bultos}</p>
+                </div>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-xs text-muted-foreground">C/R</p>
+                  <p className="text-lg font-bold text-foreground mt-1">{formatCurrency(comprobante.importe_contra_reembolso)}</p>
+                </div>
+                <div className="bg-background p-3 rounded-md border border-border">
+                  <p className="text-xs text-muted-foreground">Flete Pago</p>
+                  <p className="text-lg font-bold text-foreground mt-1">{formatCurrency(comprobante.importe_flete_pago)}</p>
+                </div>
+              </>
+            )}
+
+            <div className={`bg-background p-3 rounded-md border border-border border-l-4 border-l-primary ${isFactura ? 'md:max-w-xs' : ''}`}>
+              <p className="text-xs text-muted-foreground">{isFactura ? 'Importe Total' : 'Flete a Cobrar'}</p>
               <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(comprobante.importe_flete_cobro)}</p>
             </div>
           </div>

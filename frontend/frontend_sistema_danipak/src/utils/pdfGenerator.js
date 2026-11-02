@@ -96,7 +96,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.text((comprobante.domicilio_remitente || '').substring(0, 45), x + 22, y + 14);
 
   doc.text("Loc.:", x + 115, y + 14);
-  const locRemitenteFinal = (comprobante.localidad_remitente_rel && comprobante.localidad_remitente_rel.nombre) || '';
+  const locRemitenteFinal = comprobante?.localidad_remitente_rel?.nombre || '';
   doc.text(locRemitenteFinal.substring(0, 25), x + 128, y + 14);
 
   doc.line(x, y + 18, x + 190, y + 18);
@@ -113,7 +113,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.text((comprobante.domicilio_destinatario || '').substring(0, 45), x + 22, y + 32);
 
   doc.text("Loc.:", x + 115, y + 32);
-  const locDestFinal = (comprobante.localidad_destinatario_rel && comprobante.localidad_destinatario_rel.nombre) || '';
+  const locDestFinal = comprobante?.localidad_destinatario_rel?.nombre || '';
   doc.text(locDestFinal.substring(0, 25), x + 128, y + 32);
 
   doc.line(x, y + 36, x + 190, y + 36);

@@ -25,7 +25,7 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   doc.roundedRect(x, y + 3, 190, 26, 1, 1);
 
   if (logoImg) {
-    doc.addImage(logoImg, 'PNG', x + 2, y + 6, 60, 16);
+    doc.addImage(logoImg, 'PNG', x + 2, y + 5, 60, 16);
   } else {
     doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
@@ -61,37 +61,37 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   doc.roundedRect(x, y, 190, 60 + extra, 1, 1);
   
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text("Recibimos de:", x + 5, y + 12);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(17);
+  doc.setFontSize(15);
   doc.text(clienteNombre, x + 38, y + 12);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text("La suma de pesos:", x + 5, y + 26);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(18);
+  doc.setFontSize(15);
   doc.text(`$ ${Number(pago.monto).toLocaleString('es-AR')}`, x + 48, y + 26);
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
+  doc.setFontSize(14);
   doc.text("En concepto de:", x + 5, y + 40);
   doc.setFont("helvetica", "normal");
   doc.text(`Abono a C/C (Método: ${pago.metodo_pago})`, x + 44, y + 40);
 
   if (numerosFacturas.length) {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
+    doc.setFontSize(13);
     const leyenda = doc.splitTextToSize(`Cancela Facturas Nro: ${numerosFacturas.join(', ')}`, 180);
     doc.text(leyenda.slice(0, 2), x + 5, y + 54);
-    doc.setFontSize(15);
+    doc.setFontSize(13);
   }
 
   // Firmas
   doc.setLineDash([2, 2], 0);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.line(x + 20, y + 48 + extra, x + 80, y + 48 + extra);
   doc.text(`Firma ${datosEmpresa.nombre.substring(0, 15)}`, x + 50, y + 54 + extra, { align: "center" });
 

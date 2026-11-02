@@ -59,6 +59,7 @@ export default function App() {
             <Route path="/comprobantes/nuevo" element={<ComprobanteForm />} />
             <Route path="/comprobantes/editar/:id" element={<ComprobanteForm />} />
             <Route path="/comprobantes/:id" element={<ComprobanteView />} />
+            <Route path="/facturas/:id" element={<ComprobanteView />} />
             <Route path="/clientes" element={<ClientesList />} />
             <Route path="/clientes/nuevo" element={<ClienteForm />} />
             <Route path="/clientes/editar/:id" element={<ClienteForm />} />

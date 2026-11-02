@@ -4,7 +4,7 @@ import { ArrowLeft, Download, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { comprobantesService } from '../../../api/comprobantesService';
-import { facturaService } from '../../../api/facturaService';
+import { facturaService } from '../../../api/facturaService'; 
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService';
 import { formatCurrency, formatDate } from '../../../utils/formatters';
@@ -14,7 +14,7 @@ import Button from '../../../components/ui/Button';
 export default function ComprobanteView() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation(); 
   
   const isFactura = location.pathname.includes('/facturas'); 
 
@@ -28,11 +28,10 @@ export default function ComprobanteView() {
       try {
         if (isFactura) {
           // ==============================
-          // LÓGICA PARA CARGAR FACTURA
+          // CARGA DE FACTURA
           // ==============================
           const data = await facturaService.getById(id);
           
-          // Mapeamos los datos para que la vista los entienda igual que un comprobante
           setComprobante({
             ...data,
             numero_comprobante: data.numero_factura,
@@ -42,45 +41,63 @@ export default function ComprobanteView() {
           });
 
           try {
-            // Buscamos el cliente usando el cliente_id de la factura
-            const clienteData = await clientesServices.getById(data.cliente_id);
-            setNombres({
-              cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_id}`,
-              locRemitente: '-',
-              locDestinatario: '-'
-            });
+            if (data.cliente_id) {
+              const clienteData = await clientesServices.getById(data.cliente_id);
+              setNombres({
+                cliente: clienteData.razon_social || clienteData.nombre_fantasia || "",
+                locRemitente: '',
+                locDestinatario: ''
+              });
+            }
           } catch (err) {
             console.error("Error al cargar cliente de la factura", err);
-            setNombres({ cliente: `ID: ${data.cliente_id}`, locRemitente: '-', locDestinatario: '-' });
+            setNombres({ cliente: "", locRemitente: '', locDestinatario: '' });
           }
 
         } else {
           // ==============================
-          // LÓGICA PARA CARGAR COMPROBANTE (ORIGINAL)
+          // CARGA DE COMPROBANTE
           // ==============================
           const data = await comprobantesService.getById(id);
           setComprobante(data);
 
-          try {
-            const [clienteData, locRemData, locDestData] = await Promise.all([
-              clientesServices.getById(data.cliente_remitente_id),
-              localidadService.getById(data.localidad_remitente_id),
-              localidadService.getById(data.localidad_destinatario_id)
-            ]);
+          // Inicializamos vacíos
+          let nombreCliente = data.nombre_remitente || ""; 
+          let nombreLocRem = "";
+          let nombreLocDest = "";
 
-            setNombres({
-              cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
-              locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
-              locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
-            });
-          } catch (err) {
-            console.error("Error al cargar datos vinculados", err);
-            setNombres({
-              cliente: `ID: ${data.cliente_remitente_id}`,
-              locRemitente: `ID: ${data.localidad_remitente_id}`,
-              locDestinatario: `ID: ${data.localidad_destinatario_id}`
-            });
+          // Usamos los campos correctos (o fallbacks)
+          const idCliente = data.remitente_id || data.cliente_remitente_id;
+          const idLocOrigen = data.localidad_origen_id || data.localidad_remitente_id;
+          const idLocDestino = data.localidad_destino_id || data.localidad_destinatario_id;
+
+          // Peticiones aisladas: Si una falla (o es nula), no rompe las demás
+          if (idCliente) {
+            try {
+              const clienteData = await clientesServices.getById(idCliente);
+              nombreCliente = clienteData.razon_social || clienteData.nombre_fantasia || nombreCliente;
+            } catch (e) { console.error("Error cliente", e); }
           }
+
+          if (idLocOrigen) {
+            try {
+              const locRemData = await localidadService.getById(idLocOrigen);
+              nombreLocRem = locRemData.nombre || "";
+            } catch (e) { console.error("Error loc origen", e); }
+          }
+
+          if (idLocDestino) {
+            try {
+              const locDestData = await localidadService.getById(idLocDestino);
+              nombreLocDest = locDestData.nombre || "";
+            } catch (e) { console.error("Error loc destino", e); }
+          }
+
+          setNombres({
+            cliente: nombreCliente,
+            locRemitente: nombreLocRem,
+            locDestinatario: nombreLocDest
+          });
         }
 
       } catch (error) {
@@ -95,7 +112,6 @@ export default function ComprobanteView() {
   }, [id, isFactura]);
 
   const handleDescargarPdf = async () => {
-    // Si es factura, atajamos el clic porque el diseño PDF es distinto
     if (isFactura) {
       toast.info("Descarga de PDF de Factura en desarrollo");
       return;

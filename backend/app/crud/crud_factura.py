@@ -38,7 +38,6 @@ def create_factura(db: Session, factura: FacturaCreate, usuario_id: int) -> Fact
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente no encontrado.")
 
-    # Sin cuenta corriente la factura se asume cobrada en el momento: no hay deuda ni movimiento.
     tiene_cc = bool(cliente.tiene_cuenta_corriente)
     estado = "pendiente" if tiene_cc else "pagada"
 

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X, RefreshCw } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X, RefreshCw, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { comprobantesService } from '../../../api/comprobantesService';
+import { facturaService } from '../../../api/facturaService'; // Asegurate de que la ruta sea correcta
 import { clientesServices } from '../../../api/clientesServices';
 import { localidadService } from '../../../api/localidadService';
 import ConfirmDialog from '../../../components/ConfirmDialog';
@@ -23,7 +24,8 @@ export default function ComprobantesList() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filtros, setFiltros] = useState({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
+  // Modificamos "tipo" para que sea un array "tipos"
+  const [filtros, setFiltros] = useState({ tipos: [], estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
   const [showFilters, setShowFilters] = useState(false);
 
   const { data: clientesData } = useQuery({
@@ -38,20 +40,93 @@ export default function ComprobantesList() {
   });
   const localidadesSelect = localidadesData?.items || [];
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros],
-    queryFn: () => comprobantesService.getAll(currentPage, limit, searchTerm, filtros),
+  // Traemos comprobantes
+  const { data: compData, isLoading: isLoadingComp } = useQuery({
+    queryKey: ['comprobantes', currentPage, limit, searchTerm, filtros], // Mantenemos las keys originales
+    queryFn: () => comprobantesService.getAll(1, 1000), // Traemos todo para unificar localmente
   });
 
-  const comprobantes = data?.items || [];
-  const totalRecords = data?.total || 0;
+  // Traemos facturas
+  const { data: factData, isLoading: isLoadingFact } = useQuery({
+    queryKey: ['facturas-raw'],
+    queryFn: () => facturaService.getAll(1, 1000),
+  });
+
+  const isLoading = isLoadingComp || isLoadingFact;
+
+  // Unificación de datos
+  const datosUnificadosYFiltrados = useMemo(() => {
+    let unificados = [];
+
+    if (compData?.items) {
+      unificados = [...unificados, ...compData.items.map(c => ({...c, es_factura: false}))];
+    }
+    
+    if (factData?.items) {
+      unificados = [...unificados, ...factData.items.map(f => ({
+        ...f,
+        es_factura: true,
+        tipo: 'Factura', // Forzamos el tipo para el filtro y la tabla
+        fecha_emision: f.fecha, // Mapeo de fecha
+        numero_comprobante: f.numero_factura, // Mapeo de número
+        nombre_destinatario: f.cliente?.razon_social || '-', // Mapeo de cliente
+        importe_flete_cobro: f.importe_total, // Mapeo de importe
+        estado: f.estado // pendiente o pagada
+      }))];
+    }
+
+    // Ordenar por fecha_emision descendente
+    unificados.sort((a, b) => new Date(b.fecha_emision) - new Date(a.fecha_emision));
+
+    // Aplicar Filtros Locales
+    return unificados.filter(item => {
+      if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
+        const num = String(item.numero_comprobante || '').toLowerCase();
+        const dest = String(item.nombre_destinatario || '').toLowerCase();
+        if (!num.includes(searchLower) && !dest.includes(searchLower)) return false;
+      }
+
+      if (filtros.tipos.length > 0) {
+        if (!filtros.tipos.includes(item.tipo)) return false;
+      }
+
+      if (filtros.estado && item.estado !== filtros.estado) return false;
+      if (filtros.fecha_desde && new Date(item.fecha_emision) < new Date(filtros.fecha_desde)) return false;
+      if (filtros.fecha_hasta && new Date(item.fecha_emision) > new Date(filtros.fecha_hasta)) return false;
+
+      if (filtros.cliente_id) {
+        const itemClienteId = item.es_factura ? item.cliente_id : item.remitente_id; // Remitente_id según comprobante original
+        if (String(itemClienteId) !== String(filtros.cliente_id)) return false;
+      }
+      
+      // Filtro de localidad (solo aplica a comprobantes)
+      if (filtros.localidad_id && !item.es_factura) {
+        if (String(item.localidad_origen_id) !== String(filtros.localidad_id) && String(item.localidad_destino_id) !== String(filtros.localidad_id)) return false;
+      }
+
+      return true;
+    });
+
+  }, [compData, factData, searchTerm, filtros]);
+
+  // Paginación manual para los datos unificados
+  const totalRecords = datosUnificadosYFiltrados.length;
   const totalPages = Math.ceil(totalRecords / limit);
+  const comprobantesPaginados = datosUnificadosYFiltrados.slice((currentPage - 1) * limit, currentPage * limit);
+
 
   const anularMutation = useMutation({
-    mutationFn: (id) => comprobantesService.updateEstado(id, { estado: "Anulado" }),
+    mutationFn: (item) => {
+        if(item.es_factura){
+             return facturaService.updateFactura(item.id, { estado: "Anulado" })
+        }
+        return comprobantesService.updateEstado(item.id, { estado: "Anulado" })
+    },
     onSuccess: () => {
-      toast.success("Comprobante anulado");
+      toast.success("Documento anulado");
       queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
+      queryClient.invalidateQueries({ queryKey: ['facturas-raw'] });
     },
     onError: (error) => {
       toast.error("Error al anular");
@@ -70,16 +145,31 @@ export default function ComprobantesList() {
     setCurrentPage(1);
   };
 
-  const hayFiltros = searchTerm !== "" || Object.values(filtros).some(v => v !== "");
-  
-  const limpiarFiltros = () => {
-    setSearchTerm("");
-    setFiltros({ tipo: "", estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
+  // Checkbox de Tipos
+  const toggleTipoFiltro = (tipoAAlternar) => {
+    setFiltros(prev => {
+      const nuevosTipos = prev.tipos.includes(tipoAAlternar)
+        ? prev.tipos.filter(t => t !== tipoAAlternar) 
+        : [...prev.tipos, tipoAAlternar];             
+      return { ...prev, tipos: nuevosTipos };
+    });
     setCurrentPage(1);
   };
 
-  const handleDescargarPdf = async (comprobante) => {
-    // 1. Abrir ventana INMEDIATAMENTE al hacer clic
+  const hayFiltros = searchTerm !== "" || filtros.tipos.length > 0 || filtros.estado !== "" || filtros.fecha_desde !== "" || filtros.fecha_hasta !== "" || filtros.cliente_id !== "" || filtros.localidad_id !== "";
+  
+  const limpiarFiltros = () => {
+    setSearchTerm("");
+    setFiltros({ tipos: [], estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
+    setCurrentPage(1);
+  };
+
+  const handleDescargarPdf = async (item) => {
+    if (item.es_factura) {
+       toast.info("Descarga de PDF de Factura no implementada");
+       return; 
+    }
+
     const pdfWindow = window.open('', '_blank');
     
     if (!pdfWindow) {
@@ -89,13 +179,16 @@ export default function ComprobantesList() {
 
     pdfWindow.document.write('<html><body style="background:#333;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><h2>Generando comprobante...</h2></body></html>');
     
-    setDownloadingId(comprobante.id);
+    setDownloadingId(item.id);
     toast.info("Generando PDF...");
 
     try {
-      const blob = await generarPdfLocal(comprobante);
+      // Hacemos el fetch completo para traer las relaciones (localidad, etc) antes de pasarlo al PDF
+      const comprobanteCompleto = await comprobantesService.getById(item.id);
+      
+      const blob = await generarPdfLocal(comprobanteCompleto);
       const url = window.URL.createObjectURL(blob);
-      const titulo = `Comprobante_${comprobante.numero_comprobante || 'Offline'}.pdf`;
+      const titulo = `Comprobante_${comprobanteCompleto.numero_comprobante || 'Offline'}.pdf`;
 
       pdfWindow.document.open(); 
       pdfWindow.document.write(`
@@ -125,14 +218,14 @@ export default function ComprobantesList() {
     }
   };
 
-  const handleAnular = (id) => {
-    setComprobanteAAnular(id);
+  const handleAnular = (item) => {
+    setComprobanteAAnular(item);
   };
 
   const confirmarAnulacion = () => {
-    const id = comprobanteAAnular;
+    const item = comprobanteAAnular;
     setComprobanteAAnular(null);
-    anularMutation.mutate(id);
+    anularMutation.mutate(item);
   };
 
   const descargarArchivoBackend = async (urlEndpoint, nombreArchivo) => {
@@ -141,7 +234,8 @@ export default function ComprobantesList() {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
-      if (filtros.tipo) params.append('tipo', filtros.tipo);
+      // Solo pasamos el primer tipo seleccionado al backend si existe (por compatibilidad con exportar)
+      if (filtros.tipos.length > 0) params.append('tipo', filtros.tipos[0]); 
       if (filtros.estado) params.append('estado', filtros.estado);
       if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
       if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
@@ -177,30 +271,46 @@ export default function ComprobantesList() {
 
   const columnas = [
     { key: 'fecha_emision', label: 'Fecha Emisión', render: (fila) => formatDate(fila.fecha_emision) },
-    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => fila.tipo || '-' },
+    { key: 'tipo_comprobante', label: 'Tipo', render: (fila) => (
+        <span className={`px-2 py-1 rounded text-xs font-semibold ${fila.es_factura ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-800'}`}>
+          {fila.tipo || '-'}
+        </span>
+      ) 
+    },
     { key: 'numero_comprobante', label: 'Número', render: (fila) => <span className="font-medium">{fila.numero_comprobante}</span> },
     { key: 'nombre_destinatario', label: 'Destinatario', render: (fila) => fila.nombre_destinatario || '-' },
-    { key: 'importe_flete_cobro', label: 'Flete Cobrar', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
+    { key: 'importe_flete_cobro', label: 'Importe', render: (fila) => <span className="font-semibold">{formatCurrency(fila.importe_flete_cobro)}</span> },
     { key: 'estado', label: 'Estado',
-      render: (fila) => (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${fila.estado === 'Anulado' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-          {fila.estado}
-        </span>
-      )
+      render: (fila) => {
+        let clases = 'bg-gray-100 text-gray-800';
+        if (fila.estado === 'Anulado') clases = 'bg-red-100 text-red-800';
+        else if (fila.estado === 'Emitido' || fila.estado === 'pagada') clases = 'bg-green-100 text-green-800';
+        else if (fila.estado === 'pendiente') clases = 'bg-yellow-100 text-yellow-800';
+
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${clases}`}>
+            {fila.estado}
+          </span>
+        );
+      }
     },
     { key: 'acciones', label: 'Acciones',
       render: (fila) => (
         <div className="flex gap-1">
-          <Button variant="outline" onClick={() => navigate(`/comprobantes/${fila.id}`)} className="px-2 py-1 h-8" title="Ver">
+          <Button variant="outline" onClick={() => navigate(fila.es_factura ? `/facturas/${fila.id}` : `/comprobantes/${fila.id}`)} className="px-2 py-1 h-8" title="Ver">
             <Eye size={16} className="text-blue-600" />
           </Button>
-          <Button variant="outline" onClick={() => handleDescargarPdf(fila)} disabled={downloadingId === fila.id} className="px-2 py-1 h-8" title="Descargar PDF">
-            <Download size={16} className="text-green-600" />
-          </Button>
-          <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">
-            <Pencil size={16} className="text-amber-600" />
-          </Button>
-          <Button variant="outline" onClick={() => handleAnular(fila.id)} disabled={fila.estado === 'Anulado' || anularMutation.isPending} className="px-2 py-1 h-8" title="Anular">
+          {!fila.es_factura && (
+            <Button variant="outline" onClick={() => handleDescargarPdf(fila)} disabled={downloadingId === fila.id} className="px-2 py-1 h-8" title="Descargar PDF">
+              <Download size={16} className="text-green-600" />
+            </Button>
+          )}
+          {!fila.es_factura && (
+            <Button variant="outline" onClick={() => navigate(`/comprobantes/editar/${fila.id}`)} disabled={fila.estado === 'Anulado'} className="px-2 py-1 h-8" title="Editar">
+              <Pencil size={16} className="text-amber-600" />
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => handleAnular(fila)} disabled={fila.estado === 'Anulado' || anularMutation.isPending} className="px-2 py-1 h-8" title="Anular">
             <Ban size={16} className="text-red-600" />
           </Button>
         </div>
@@ -217,7 +327,10 @@ export default function ComprobantesList() {
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           {/* Botón de recarga manual */}
-          <Button variant="outline" onClick={() => queryClient.invalidateQueries({ queryKey: ['comprobantes'] })} className="w-full sm:w-auto text-muted-foreground">
+          <Button variant="outline" onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
+              queryClient.invalidateQueries({ queryKey: ['facturas-raw'] });
+          }} className="w-full sm:w-auto text-muted-foreground">
             <RefreshCw size={18} className="mr-2" />
             Refrescar
           </Button>
@@ -268,7 +381,7 @@ export default function ComprobantesList() {
               className="w-full sm:w-auto"
             >
               <Filter size={18} className="mr-2" />
-              Filtros {Object.values(filtros).some(v => v !== "") && "(Activos)"}
+              Filtros {Object.values(filtros).some(v => v !== "" && v.length !== 0) && "(Activos)"}
             </Button>
             
             {hayFiltros && (
@@ -285,19 +398,28 @@ export default function ComprobantesList() {
 
         {showFilters && (
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border animate-in slide-in-from-top-2">
-            <div className="flex flex-col">
-              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Tipo de Comprobante</label>
-              <select 
-                name="tipo" 
-                value={filtros.tipo} 
-                onChange={handleFilterChange}
-                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
-              >
-                <option value="">Todos los Tipos</option>
-                <option value="Comprobante de Envío">Envío</option>
-                <option value="Remito">Remito</option>
-              </select>
+            
+            {/* NUEVO FILTRO MULTIPLE DE TIPO */}
+            <div className="flex flex-col col-span-1 sm:col-span-4 bg-secondary/30 p-3 rounded-md border border-border">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-2">Tipos de Documento a Mostrar:</label>
+              <div className="flex flex-wrap gap-4">
+                {["Comprobante de Envío", "Remito", "Factura"].map(tipoDoc => (
+                  <label key={tipoDoc} className="flex items-center gap-2 cursor-pointer group">
+                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${filtros.tipos.includes(tipoDoc) ? 'bg-primary border-primary' : 'bg-background border-input group-hover:border-primary'}`}>
+                      {filtros.tipos.includes(tipoDoc) && <Check size={14} className="text-primary-foreground" />}
+                    </div>
+                    <span className="text-sm font-medium">{tipoDoc}</span>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={filtros.tipos.includes(tipoDoc)} 
+                      onChange={() => toggleTipoFiltro(tipoDoc)} 
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
+
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente (Remitente)</label>
               <select 
@@ -312,6 +434,7 @@ export default function ComprobantesList() {
                 ))}
               </select>
             </div>
+            
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Localidad (Origen/Destino)</label>
               <select 
@@ -326,6 +449,7 @@ export default function ComprobantesList() {
                 ))}
               </select>
             </div>
+            
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Estado</label>
               <select 
@@ -335,10 +459,13 @@ export default function ComprobantesList() {
                 className="px-3 py-2 rounded-md border border-input bg-background text-sm"
               >
                 <option value="">Todos los Estados</option>
-                <option value="Emitido">Emitido / Válido</option>
+                <option value="Emitido">Emitido</option>
+                <option value="pendiente">Pendiente (Factura)</option>
+                <option value="pagada">Pagada (Factura)</option>
                 <option value="Anulado">Anulado</option>
               </select>
             </div>
+            
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
               <input 
@@ -349,6 +476,7 @@ export default function ComprobantesList() {
                 className="px-3 py-2 rounded-md border border-input bg-background text-sm"
               />
             </div>
+            
             <div className="flex flex-col">
               <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Hasta</label>
               <input 
@@ -368,7 +496,7 @@ export default function ComprobantesList() {
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Cargando...</div>
         ) : (
-          <DataTable columns={columnas} data={comprobantes} />
+          <DataTable columns={columnas} data={comprobantesPaginados} />
         )}
         
         {!isLoading && (

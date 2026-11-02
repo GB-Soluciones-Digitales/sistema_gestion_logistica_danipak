@@ -44,7 +44,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
 
   // LOGO
   if (logoImg) {
-    doc.addImage(logoImg, 'PNG', x + 2, y + 6, 60, 16);
+    doc.addImage(logoImg, 'PNG', x + 2, y + 5, 60, 16);
   } else {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(24);

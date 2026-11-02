@@ -29,7 +29,7 @@ const getDatosEmpresa = async () => {
   }
 };
 
-const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
+const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres) => {
   const x = 10;
   let y = startY;
 
@@ -79,7 +79,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   // ==========================================
   // 2. CUERPO PRINCIPAL
   // ==========================================
-  y = y + 31; // Achiqué el salto al cuerpo
+  y = y + 31; 
   doc.roundedRect(x, y, 190, 95, 1, 1);
 
   // Remitente
@@ -96,7 +96,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.text((comprobante.domicilio_remitente || '').substring(0, 45), x + 22, y + 14);
 
   doc.text("Loc.:", x + 115, y + 14);
-  const locRemitenteFinal = comprobante?.localidad_remitente_rel?.nombre || '';
+  const locRemitenteFinal = (nombres && nombres.locRemitente) || comprobante?.localidad_remitente_rel?.nombre || '';
   doc.text(locRemitenteFinal.substring(0, 25), x + 128, y + 14);
 
   doc.line(x, y + 18, x + 190, y + 18);
@@ -113,7 +113,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.text((comprobante.domicilio_destinatario || '').substring(0, 45), x + 22, y + 32);
 
   doc.text("Loc.:", x + 115, y + 32);
-  const locDestFinal = comprobante?.localidad_destinatario_rel?.nombre || '';
+  const locDestFinal = (nombres && nombres.locDestinatario) || comprobante?.localidad_destinatario_rel?.nombre || '';
   doc.text(locDestFinal.substring(0, 25), x + 128, y + 32);
 
   doc.line(x, y + 36, x + 190, y + 36);
@@ -178,7 +178,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg) => {
   doc.setLineDash([], 0); 
 };
 
-export const generarPdfLocal = async (comprobante) => {
+export const generarPdfLocal = async (comprobante, nombres) => {
   const datosEmpresa = await getDatosEmpresa();
   const logoImg = await cargarImagen(LogoExtendido); 
 
@@ -188,14 +188,14 @@ export const generarPdfLocal = async (comprobante) => {
     format: 'a4'
   });
 
-  dibujarTicket(doc, 10, comprobante, datosEmpresa, logoImg);
+  dibujarTicket(doc, 10, comprobante, datosEmpresa, logoImg, nombres);
 
   doc.setLineDash([2, 2], 0);
   doc.setLineWidth(0.3);
   doc.line(0, 148.5, 210, 148.5);
   doc.setLineDash([], 0);
 
-  dibujarTicket(doc, 155, comprobante, datosEmpresa, logoImg);
+  dibujarTicket(doc, 155, comprobante, datosEmpresa, logoImg, nombres);
 
   return doc.output('blob');
 };

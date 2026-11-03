@@ -26,12 +26,22 @@ export default function ComprobanteForm() {
   const [cargandoNumero, setCargandoNumero] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
+  // Helper para sacar la fecha local YYYY-MM-DD
+  const getFechaLocal = () => {
+    const hoy = new Date();
+    // Armamos los pedazos respetando la zona horaria del navegador
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${anio}-${mes}-${dia}`;
+  };
+
   const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm({
     defaultValues: {
       estado: 'Emitido',
       tipo: '',
       cantidad_bultos: 1,
-      fecha_emision: new Date().toISOString().split('T')[0],
+      fecha_emision: getFechaLocal(),
       nombre_remitente: '',
       cliente_remitente_id: null,
       factura_cliente_id: null,

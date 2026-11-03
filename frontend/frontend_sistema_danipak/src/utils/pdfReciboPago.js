@@ -37,7 +37,6 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   doc.text(datosEmpresa.telefonos, x + 3, y + 22);
   doc.text(datosEmpresa.direccion, x + 3, y + 27);
 
-  // LA "X" CENTRAL
   doc.setFillColor(255, 255, 255);
   doc.rect(100, y + 3, 10, 9, 'FD');
   doc.setFont("helvetica", "bold");
@@ -50,7 +49,17 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
   doc.text(`N° ${pago.numero_recibo}`, 120, y + 18);
 
   doc.setFont("helvetica", "normal");
-  doc.text(`Fecha: ${new Date(pago.fecha_pago).toLocaleDateString('es-AR')}`, 120, y + 26);
+  
+  // SOLUCIÓN HORARIA
+  let fechaRecibo;
+  if (pago.fecha_pago) {
+      const frStr = pago.fecha_pago.includes('T') ? pago.fecha_pago : `${pago.fecha_pago}T12:00:00`;
+      fechaRecibo = new Date(frStr);
+  } else {
+      fechaRecibo = new Date();
+  }
+  
+  doc.text(`Fecha: ${fechaRecibo.toLocaleDateString('es-AR')}`, 120, y + 26);
 
   // ==========================================
   // 2. CUERPO PRINCIPAL
@@ -88,7 +97,6 @@ const dibujarRecibo = (doc, startY, pago, clienteNombre, datosEmpresa, logoImg) 
     doc.setFontSize(13);
   }
 
-  // Firmas
   doc.setLineDash([2, 2], 0);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(13);
@@ -125,16 +133,13 @@ export const generarReciboPdf = async (pago, clienteNombre) => {
       format: 'a4'
     });
 
-    // Dibujamos el Original
     dibujarRecibo(doc, 10, pago, clienteNombre, datosEmpresa, logoImg);
 
-    // Línea de corte
     doc.setLineDash([2, 2], 0);
     doc.setLineWidth(0.3);
     doc.line(0, 148.5, 210, 148.5);
     doc.setLineDash([], 0);
 
-    // Dibujamos el Duplicado
     dibujarRecibo(doc, 155, pago, clienteNombre, datosEmpresa, logoImg);
 
     return doc.output('blob');

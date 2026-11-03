@@ -42,7 +42,6 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
   doc.setLineWidth(0.3);
   doc.roundedRect(x, y + 3, 190, 26, 1, 1);
 
-  // LOGO
   if (logoImg) {
     doc.addImage(logoImg, 'PNG', x + 2, y + 5, 60, 16);
   } else {
@@ -56,7 +55,6 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
   doc.text(datosEmpresa.telefonos, x + 3, y + 22);
   doc.text(datosEmpresa.direccion, x + 3, y + 27);
 
-  // LA "X" CENTRAL 
   doc.setFillColor(255, 255, 255);
   doc.rect(100, y + 3, 10, 9, 'FD'); 
   doc.setFont("helvetica", "bold");
@@ -69,10 +67,21 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
   doc.text(`N° ${comprobante.numero_comprobante || 'PENDIENTE'}`, 120, y + 18);
 
   doc.text("Fecha", 120, y + 26);
-  const fecha = comprobante.fecha_emision ? new Date(comprobante.fecha_emision) : new Date();
-  const dia = String(fecha.getDate() + 1).padStart(2, '0');
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-  const anio = String(fecha.getFullYear());
+  
+  // SOLUCIÓN HORARIA
+  let fechaParseada;
+  if (comprobante.fecha_emision) {
+    const fechaStr = comprobante.fecha_emision.includes('T') 
+      ? comprobante.fecha_emision 
+      : `${comprobante.fecha_emision}T12:00:00`;
+    fechaParseada = new Date(fechaStr);
+  } else {
+    fechaParseada = new Date();
+  }
+
+  const dia = String(fechaParseada.getDate()).padStart(2, '0');
+  const mes = String(fechaParseada.getMonth() + 1).padStart(2, '0');
+  const anio = String(fechaParseada.getFullYear());
 
   doc.text(`${dia}  /  ${mes}  /  ${anio}`, 140, y + 26);
 
@@ -87,7 +96,8 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
   doc.text("Remitente:", x + 2, y + 6);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  const remitenteFinal = comprobante.nombre_remitente || (comprobante.cliente && comprobante.cliente.razon_social) || '';
+  
+  const remitenteFinal = (nombres && nombres.cliente) || comprobante.nombre_remitente || (comprobante.cliente && comprobante.cliente.razon_social) || '';
   doc.text(remitenteFinal, x + 26, y + 6);
 
   doc.setFont("helvetica", "normal");
@@ -97,7 +107,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
 
   doc.text("Loc.:", x + 115, y + 14);
   const locRemitenteFinal = (nombres && nombres.locRemitente) || comprobante?.localidad_remitente_rel?.nombre || '';
-  doc.text(locRemitenteFinal.substring(0, 25), x + 128, y + 14);
+  doc.text(locRemitenteFinal?.substring(0, 25) || '', x + 128, y + 14);
 
   doc.line(x, y + 18, x + 190, y + 18);
 
@@ -114,7 +124,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
 
   doc.text("Loc.:", x + 115, y + 32);
   const locDestFinal = (nombres && nombres.locDestinatario) || comprobante?.localidad_destinatario_rel?.nombre || '';
-  doc.text(locDestFinal.substring(0, 25), x + 128, y + 32);
+  doc.text(locDestFinal?.substring(0, 25) || '', x + 128, y + 32);
 
   doc.line(x, y + 36, x + 190, y + 36);
 

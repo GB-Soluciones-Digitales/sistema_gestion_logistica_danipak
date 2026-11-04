@@ -1,14 +1,14 @@
 import io
 import pandas as pd
 from fastapi import Response
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.schemas.comprobante import ComprobanteCreate, ComprobantePaginatedResponse, ComprobanteUpdate, ComprobanteResponse
-from app.crud import crud_comprobante
+from app.crud import crud_comprobante, crud_factura
 from app.models.Usuario import Usuario
 
 router = APIRouter(prefix="/comprobantes", tags=["Comprobantes"])
@@ -33,16 +33,37 @@ def get_comprobantes(skip: int = 0, limit: int = 10, search: Optional[str] = Non
 @router.get("/exportar/general")
 def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
     
-    resultado = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
-    comprobantes = resultado["items"]
+    # 1. Traemos los comprobantes
+    resultado_comp = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
+    comprobantes = resultado_comp["items"]
     
-    if not comprobantes:
-        raise HTTPException(status_code=404, detail="No hay comprobantes para exportar con los filtros seleccionados.")
+    # 2. Traemos las facturas (si el filtro de tipo lo permite y no se filtra por una localidad específica, ya que las facturas no tienen localidad_id directo)
+    facturas = []
+    if (tipo is None or tipo == "Factura") and localidad_id is None:
+        # get_facturas solo recibe search y estado (no cliente ni fechas), así que filtramos en memoria
+        resultado_fact = crud_factura.get_facturas(db=db, skip=0, limit=10000, search=search, estado=estado)
+        todas_las_facturas = resultado_fact["items"]
+        
+        # Filtramos en memoria los parámetros que el crud no soporta
+        for f in todas_las_facturas:
+            if cliente_id and f.cliente_id != cliente_id:
+                continue
+            if fecha_desde and f.fecha.date() < fecha_desde:
+                continue
+            if fecha_hasta and f.fecha.date() > fecha_hasta:
+                continue
+            facturas.append(f)
+
+    if not comprobantes and not facturas:
+        raise HTTPException(status_code=404, detail="No hay datos para exportar con los filtros seleccionados.")
 
     datos = []
+    
+    # Procesamos los Comprobantes/Remitos
     for c in comprobantes:
         datos.append({
             "Fecha": c.fecha_emision.strftime("%d/%m/%Y"),
+            "Tipo": c.tipo,
             "Localidad Origen": c.localidad_remitente_rel.nombre if c.localidad_remitente_rel else "-",
             "Localidad Destino": c.localidad_destinatario_rel.nombre if c.localidad_destinatario_rel else "-",
             "N° Comprobante": c.numero_comprobante,
@@ -52,8 +73,33 @@ def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[s
             "C/R": float(c.importe_contra_reembolso or 0),
             "Flete Pago": float(c.importe_flete_pago or 0),
             "Flete a Cobrar": float(c.importe_flete_cobro or 0),
-            "Estado": c.estado
+            "Estado": c.estado,
+            "Observaciones": c.observaciones or "-"
         })
+        
+    # Procesamos las Facturas
+    for f in facturas:
+        nombre_cliente = f.cliente.razon_social if f.cliente else "-"
+        loc_cliente = f.cliente.localidad.nombre if f.cliente and f.cliente.localidad else "-"
+        
+        datos.append({
+            "Fecha": f.fecha.strftime("%d/%m/%Y"),
+            "Tipo": "Factura",
+            "Localidad Origen": "-",
+            "Localidad Destino": loc_cliente,
+            "N° Comprobante": f.numero_factura,
+            "Remitente": "EXPRESO DANIPAK",
+            "Destinatario": nombre_cliente,
+            "Bultos": "-",
+            "C/R": 0.0,
+            "Flete Pago": 0.0,
+            "Flete a Cobrar": float(f.importe_total or 0), 
+            "Estado": f.estado,
+            "Observaciones": f.observaciones or f.mes_correspondiente or "-"
+        })
+
+    # Ordenar por fecha
+    datos = sorted(datos, key=lambda x: datetime.strptime(x["Fecha"], "%d/%m/%Y"), reverse=True)
 
     df = pd.DataFrame(datos)
     output = io.BytesIO()
@@ -74,17 +120,39 @@ def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[s
 @router.get("/exportar/representante")
 def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
     
-    resultado = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
-    comprobantes = resultado["items"]
+    # Traemos comprobantes
+    resultado_comp = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
+    comprobantes = resultado_comp["items"]
     
-    if not comprobantes:
-        raise HTTPException(status_code=404, detail="No hay comprobantes para exportar.")
+    # Traemos facturas
+    facturas = []
+    if tipo is None or tipo == "Factura":
+        resultado_fact = crud_factura.get_facturas(db=db, skip=0, limit=10000, search=search, estado=estado)
+        todas_las_facturas = resultado_fact["items"]
+        
+        for f in todas_las_facturas:
+            if cliente_id and f.cliente_id != cliente_id:
+                continue
+            if fecha_desde and f.fecha.date() < fecha_desde:
+                continue
+            if fecha_hasta and f.fecha.date() > fecha_hasta:
+                continue
+            
+            # Filtro manual extra para localidad en representantes
+            loc_factura = f.cliente.localidad_id if f.cliente else None
+            if localidad_id and loc_factura != localidad_id:
+                continue
+                
+            facturas.append(f)
+    
+    if not comprobantes and not facturas:
+        raise HTTPException(status_code=404, detail="No hay datos para exportar.")
 
     agrupados_por_localidad = {}
     
+    # 1. Agrupar Comprobantes por Localidad
     for c in comprobantes:
         loc_nombre = c.localidad_destinatario_rel.nombre if c.localidad_destinatario_rel else "Sin Localidad"
-        
         loc_nombre = loc_nombre[:31] 
         
         if loc_nombre not in agrupados_por_localidad:
@@ -92,12 +160,36 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
             
         agrupados_por_localidad[loc_nombre].append({
             "Fecha": c.fecha_emision.strftime("%d/%m/%Y"),
+            "Tipo": c.tipo,
             "N° Comprobante": c.numero_comprobante,
             "Remitente": c.nombre_remitente or (c.cliente.razon_social if c.cliente else "-"),
             "Destinatario": c.nombre_destinatario,
             "Localidad Origen": c.localidad_remitente_rel.nombre if c.localidad_remitente_rel else "-",
             "Bultos": c.cantidad_bultos,
             "Flete a Cobrar": float(c.importe_flete_cobro or 0),
+            "Observaciones": c.observaciones or "-",
+            "Flete Neto": "",
+            "Comisión": ""
+        })
+
+    # 2. Agrupar Facturas por Localidad del Cliente
+    for f in facturas:
+        loc_nombre = f.cliente.localidad.nombre if f.cliente and f.cliente.localidad else "Central"
+        loc_nombre = loc_nombre[:31] 
+
+        if loc_nombre not in agrupados_por_localidad:
+            agrupados_por_localidad[loc_nombre] = []
+            
+        agrupados_por_localidad[loc_nombre].append({
+            "Fecha": f.fecha.strftime("%d/%m/%Y"),
+            "Tipo": "Factura",
+            "N° Comprobante": f.numero_factura,
+            "Remitente": "EXPRESO DANIPAK",
+            "Destinatario": f.cliente.razon_social if f.cliente else "-",
+            "Localidad Origen": "-",
+            "Bultos": "-",
+            "Flete a Cobrar": float(f.importe_total or 0),
+            "Observaciones": f.observaciones or f.mes_correspondiente or "-",
             "Flete Neto": "",
             "Comisión": ""
         })
@@ -105,6 +197,7 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for localidad, datos in agrupados_por_localidad.items():
+            datos = sorted(datos, key=lambda x: datetime.strptime(x["Fecha"], "%d/%m/%Y"), reverse=True)
             df = pd.DataFrame(datos)
             df.to_excel(writer, index=False, sheet_name=localidad)
             

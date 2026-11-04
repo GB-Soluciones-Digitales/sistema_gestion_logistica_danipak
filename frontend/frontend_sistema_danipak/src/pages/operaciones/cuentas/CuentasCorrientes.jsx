@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, ChevronLeft, ChevronRight, Sheet, X } from 'lucide-react';
+import { Search, Eye, Sheet, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -12,8 +12,6 @@ import { exportarAExcel } from '../../../utils/excelGenerator';
 export default function CuentasCorrientes() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [page, setPage] = useState(1);
-  const limit = 10;
   const [filtroSaldo, setFiltroSaldo] = useState('Todos');
   const [isExporting, setIsExporting] = useState(false);
 
@@ -23,9 +21,8 @@ export default function CuentasCorrientes() {
   });
 
   const cuentas = Array.isArray(data) ? data : (data?.items || []);
-  const totalRegistros = data?.totalRegistros || cuentas.length;
 
-  // Filtrado local rápido
+  // Filtrado local en memoria
   const cuentasFiltradas = cuentas.filter(c => {
     const matchSearch = c.razon_social?.toLowerCase().includes(searchTerm.toLowerCase());
     let matchSaldo = true;
@@ -97,8 +94,6 @@ export default function CuentasCorrientes() {
     }
   ];
 
-  const totalPages = Math.ceil(totalRegistros / limit);
-
   return (
     <div className="space-y-6 pb-10">
       <div>
@@ -158,20 +153,11 @@ export default function CuentasCorrientes() {
           <DataTable columns={columnas} data={cuentasFiltradas} />
         )}
 
-        {!isLoading && totalPages > 0 && (
+        {!isLoading && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-secondary/20">
             <span className="text-sm text-muted-foreground">
-              Mostrando {cuentasFiltradas.length} de {totalRegistros} Cuentas Corrientes
+              Mostrando <span className="font-bold">{cuentasFiltradas.length}</span> cuentas corrientes
             </span>
-            <div className="flex gap-2 items-center">
-              <Button variant="outline" onClick={() => setPage(p => p - 1)} disabled={page === 1 || isLoading} className="px-2 py-1 h-8">
-                <ChevronLeft size={18} />
-              </Button>
-              <span className="text-sm font-medium">Página {page} de {totalPages || 1}</span>
-              <Button variant="outline" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages } className="px-2 py-1 h-8">
-                <ChevronRight size={18} />
-              </Button>
-            </div>
           </div>
         )}
       </div>

@@ -166,8 +166,8 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
             "Destinatario": c.nombre_destinatario,
             "Localidad Origen": c.localidad_remitente_rel.nombre if c.localidad_remitente_rel else "-",
             "Bultos": c.cantidad_bultos,
-            "Flete a Cobrar": float(c.importe_flete_cobro or 0),
             "Observaciones": c.observaciones or "-",
+            "Importe": float(c.importe_flete_cobro or 0),
             "Flete Neto": "",
             "Comisión": ""
         })
@@ -188,8 +188,8 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
             "Destinatario": f.cliente.razon_social if f.cliente else "-",
             "Localidad Origen": "-",
             "Bultos": "-",
-            "Flete a Cobrar": float(f.importe_total or 0),
             "Observaciones": f.observaciones or f.mes_correspondiente or "-",
+            "Importe": float(f.importe_total or 0),
             "Flete Neto": "",
             "Comisión": ""
         })

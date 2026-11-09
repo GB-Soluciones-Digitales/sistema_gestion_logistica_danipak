@@ -245,7 +245,7 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
             sheet_name = localidad[:31]
             df.to_excel(writer, index=False, sheet_name=sheet_name)
 
-            ws = writer.book[sheet_name]
+            ws = writer.sheets.get(sheet_name) or writer.book.active
             for column in df:
                 column_length = max(df[column].astype(str).map(len).max(), len(column))
                 col_idx = df.columns.get_loc(column)

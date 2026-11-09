@@ -29,6 +29,62 @@ export const comprobantesService = {
         return response.data;
     },
 
+    getUnificadosPaginados: async (page = 1, limit = 10, search = "", estado = "") => {
+        if (!navigator.onLine) {
+            let offlineItems = await db.cache_comprobantes.toArray();
+            offlineItems.reverse();
+            
+            if (search) {
+                const searchLower = search.toLowerCase();
+                offlineItems = offlineItems.filter(item => 
+                    item.numero_comprobante?.toLowerCase().includes(searchLower) ||
+                    item.nombre_destinatario?.toLowerCase().includes(searchLower)
+                );
+            }
+            if (estado) {
+                offlineItems = offlineItems.filter(item => item.estado === estado);
+            }
+            
+            const skip = (page - 1) * limit;
+            const paginatedItems = offlineItems.slice(skip, skip + limit);
+            return { items: paginatedItems, total: offlineItems.length };
+        }
+
+        try {
+            const skip = (page - 1) * limit;
+            const response = await api.get('/api/comprobantes/lista/unificada', {
+                params: { skip, limit, search, estado }
+            });
+            
+            if (response.data && response.data.items) {
+                await db.transaction('rw', db.cache_comprobantes, async () => {
+                    await db.cache_comprobantes.clear();
+                    await db.cache_comprobantes.bulkAdd(response.data.items);
+                });
+            }
+            return response.data;
+
+        } catch (error) {
+            if (error.code === 'ERR_NETWORK') {
+                let offlineItems = await db.cache_comprobantes.toArray();
+                offlineItems.reverse();
+                if (search) {
+                    const searchLower = search.toLowerCase();
+                    offlineItems = offlineItems.filter(item => 
+                        item.numero_comprobante?.toLowerCase().includes(searchLower) ||
+                        item.nombre_destinatario?.toLowerCase().includes(searchLower)
+                    );
+                }
+                if (estado) {
+                    offlineItems = offlineItems.filter(item => item.estado === estado);
+                }
+                const skip = (page - 1) * limit;
+                return { items: offlineItems.slice(skip, skip + limit), total: offlineItems.length };
+            }
+            throw error;
+        }
+    },
+    
     getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
         if (!navigator.onLine) {
             let offlineItems = await db.cache_comprobantes.toArray();

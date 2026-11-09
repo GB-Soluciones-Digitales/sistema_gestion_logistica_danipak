@@ -26,12 +26,25 @@ def create_comprobante(comprobante_in: ComprobanteCreate, db: Session = Depends(
     
     return crud_comprobante.create_comprobante(db=db, comprobante=comprobante_in, usuario_id=current_user.id)
 
+@router.get("/lista/unificada")
+def get_comprobantes_unificados(skip: int = 0, limit: int = 10, search: Optional[str] = None, estado: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+    return crud_comprobante.get_comprobantes_unificados(db=db, skip=skip, limit=limit, search=search, estado=estado)
+
 @router.get("/", response_model=ComprobantePaginatedResponse)
 def get_comprobantes(skip: int = 0, limit: int = 10, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     return crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
 
 @router.get("/exportar/general")
 def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
+
+    if not fecha_desde or not fecha_hasta:
+        raise HTTPException(status_code=400, detail="Para exportar a Excel, debe seleccionar obligatoriamente una fecha 'Desde' y 'Hasta'.")
+    
+    diferencia_dias = (fecha_hasta - fecha_desde).days
+    if diferencia_dias < 0:
+        raise HTTPException(status_code=400, detail="La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'.")
+    if diferencia_dias > 93:
+        raise HTTPException(status_code=400, detail="El rango de exportación no puede superar los 3 meses (93 días). Por favor, acorte el rango de fechas.")
     
     # 1. Traemos los comprobantes
     resultado_comp = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)
@@ -119,6 +132,14 @@ def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[s
 
 @router.get("/exportar/representante")
 def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
+    if not fecha_desde or not fecha_hasta:
+        raise HTTPException(status_code=400, detail="Para exportar a Excel, debe seleccionar obligatoriamente una fecha 'Desde' y 'Hasta'.")
+    
+    diferencia_dias = (fecha_hasta - fecha_desde).days
+    if diferencia_dias < 0:
+        raise HTTPException(status_code=400, detail="La fecha 'Hasta' no puede ser anterior a la fecha 'Desde'.")
+    if diferencia_dias > 93:
+        raise HTTPException(status_code=400, detail="El rango de exportación no puede superar los 3 meses (93 días).")
     
     # Traemos comprobantes
     resultado_comp = crud_comprobante.get_comprobantes(db=db, skip=skip, limit=limit, search=search, localidad_id=localidad_id, cliente_id=cliente_id, tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta, estado=estado)

@@ -86,7 +86,7 @@ export default function UsuarioForm({ usuario = null, onSubmit, onCancel, isSubm
           <button
             type="button"
             onClick={() => setMostrarPassword(!mostrarPassword)}
-            className="absolute right-3 top-[34px] text-muted-foreground hover:text-foreground"
+            className="absolute right-3 top-8.5 text-muted-foreground hover:text-foreground"
           >
             {mostrarPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>

@@ -98,7 +98,11 @@ def get_comprobantes(db: Session, skip: int = 0, limit: int = 10, search: str = 
     
     return {"total": total, "items": items}
 
-def get_comprobantes_unificados(db: Session, skip: int = 0, limit: int = 10, search: str = None, estado: str = None) -> dict:
+def get_comprobantes_unificados(
+    db: Session, skip: int = 0, limit: int = 10, search: str = None, 
+    estado: str = None, tipo: str = None, fecha_desde: date = None, 
+    fecha_hasta: date = None, cliente_id: int = None, localidad_id: int = None
+) -> dict:
     
     q1 = db.query(
         Comprobante.id.label('id'),
@@ -122,7 +126,6 @@ def get_comprobantes_unificados(db: Session, skip: int = 0, limit: int = 10, sea
         literal(True).label('es_factura')
     ).outerjoin(Cliente, Factura.cliente_id == Cliente.id)
 
-    # 3. Aplicamos filtros si vienen en la petición
     if search:
         search_term = f"%{search}%"
         q1 = q1.filter(or_(Comprobante.numero_comprobante.ilike(search_term), Comprobante.nombre_destinatario.ilike(search_term)))
@@ -131,11 +134,30 @@ def get_comprobantes_unificados(db: Session, skip: int = 0, limit: int = 10, sea
     if estado:
         q1 = q1.filter(Comprobante.estado == estado)
         q2 = q2.filter(Factura.estado == estado)
+        
+    if fecha_desde:
+        q1 = q1.filter(Comprobante.fecha_emision >= fecha_desde)
+        q2 = q2.filter(Factura.fecha >= fecha_desde)
+        
+    if fecha_hasta:
+        q1 = q1.filter(Comprobante.fecha_emision <= fecha_hasta)
+        q2 = q2.filter(Factura.fecha <= fecha_hasta)
+        
+    if cliente_id:
+        q1 = q1.filter(Comprobante.cliente_remitente_id == cliente_id)
+        q2 = q2.filter(Factura.cliente_id == cliente_id)
+        
+    if localidad_id:
+        q1 = q1.filter(or_(Comprobante.localidad_remitente_id == localidad_id, Comprobante.localidad_destinatario_id == localidad_id))
+        
+    if tipo:
+        tipos_lista = tipo.split(',')
+        q1 = q1.filter(Comprobante.tipo.in_(tipos_lista))
+        if "Factura" not in tipos_lista:
+            q2 = q2.filter(literal(False) == literal(True))
 
     query_unificada = q1.union_all(q2).subquery()
-    
     total = db.query(query_unificada).count()
-    
     items = db.query(query_unificada).order_by(desc(query_unificada.c.fecha_emision)).offset(skip).limit(limit).all()
 
     resultado = [

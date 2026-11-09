@@ -29,7 +29,7 @@ export const comprobantesService = {
         return response.data;
     },
 
-    getUnificadosPaginados: async (page = 1, limit = 10, search = "", estado = "") => {
+    getUnificadosPaginados: async (page = 1, limit = 10, search = "", filtros = {}) => {
         if (!navigator.onLine) {
             let offlineItems = await db.cache_comprobantes.toArray();
             offlineItems.reverse();
@@ -41,20 +41,41 @@ export const comprobantesService = {
                     item.nombre_destinatario?.toLowerCase().includes(searchLower)
                 );
             }
-            if (estado) {
-                offlineItems = offlineItems.filter(item => item.estado === estado);
+            if (filtros.tipos && filtros.tipos.length > 0) {
+                offlineItems = offlineItems.filter(item => filtros.tipos.includes(item.tipo));
+            }
+            if (filtros.estado) {
+                offlineItems = offlineItems.filter(item => item.estado === filtros.estado);
+            }
+            if (filtros.fecha_desde) {
+                offlineItems = offlineItems.filter(item => item.fecha_emision >= filtros.fecha_desde);
+            }
+            if (filtros.fecha_hasta) {
+                offlineItems = offlineItems.filter(item => item.fecha_emision <= filtros.fecha_hasta);
+            }
+            if (filtros.cliente_id) {
+                offlineItems = offlineItems.filter(item => String(item.cliente_id) === String(filtros.cliente_id) || String(item.cliente_remitente_id) === String(filtros.cliente_id));
+            }
+            if (filtros.localidad_id) {
+                offlineItems = offlineItems.filter(item => item.es_factura || String(item.localidad_destinatario_id) === String(filtros.localidad_id) || String(item.localidad_remitente_id) === String(filtros.localidad_id));
             }
             
             const skip = (page - 1) * limit;
-            const paginatedItems = offlineItems.slice(skip, skip + limit);
-            return { items: paginatedItems, total: offlineItems.length };
+            return { items: offlineItems.slice(skip, skip + limit), total: offlineItems.length };
         }
 
         try {
             const skip = (page - 1) * limit;
-            const response = await api.get('/api/comprobantes/lista/unificada', {
-                params: { skip, limit, search, estado }
-            });
+            const params = { skip, limit, search };
+            
+            if (filtros.estado) params.estado = filtros.estado;
+            if (filtros.fecha_desde) params.fecha_desde = filtros.fecha_desde;
+            if (filtros.fecha_hasta) params.fecha_hasta = filtros.fecha_hasta;
+            if (filtros.cliente_id) params.cliente_id = filtros.cliente_id;
+            if (filtros.localidad_id) params.localidad_id = filtros.localidad_id;
+            if (filtros.tipos && filtros.tipos.length > 0) params.tipo = filtros.tipos.join(',');
+
+            const response = await api.get('/api/comprobantes/lista/unificada', { params });
             
             if (response.data && response.data.items) {
                 await db.transaction('rw', db.cache_comprobantes, async () => {
@@ -63,28 +84,12 @@ export const comprobantesService = {
                 });
             }
             return response.data;
-
         } catch (error) {
-            if (error.code === 'ERR_NETWORK') {
-                let offlineItems = await db.cache_comprobantes.toArray();
-                offlineItems.reverse();
-                if (search) {
-                    const searchLower = search.toLowerCase();
-                    offlineItems = offlineItems.filter(item => 
-                        item.numero_comprobante?.toLowerCase().includes(searchLower) ||
-                        item.nombre_destinatario?.toLowerCase().includes(searchLower)
-                    );
-                }
-                if (estado) {
-                    offlineItems = offlineItems.filter(item => item.estado === estado);
-                }
-                const skip = (page - 1) * limit;
-                return { items: offlineItems.slice(skip, skip + limit), total: offlineItems.length };
-            }
-            throw error;
+            console.error(error);
+            return { items: [], total: 0 }; 
         }
     },
-    
+
     getAll: async (page = 1, limit = 10, search = "", filtros = {}) => {
         if (!navigator.onLine) {
             let offlineItems = await db.cache_comprobantes.toArray();

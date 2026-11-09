@@ -1,4 +1,5 @@
 import io
+import re
 import pandas as pd
 from fastapi import Response
 from datetime import date, datetime
@@ -148,6 +149,7 @@ def exportar_excel_general(skip: int = 0, limit: int = 10000, search: Optional[s
 
 @router.get("/exportar/representante")
 def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db)):
+    
     if not fecha_desde or not fecha_hasta:
         raise HTTPException(status_code=400, detail="Para exportar a Excel, debe seleccionar obligatoriamente una fecha 'Desde' y 'Hasta'.")
     
@@ -163,7 +165,7 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
     
     # Traemos facturas
     facturas = []
-    if tipo is None or tipo == "Factura":
+    if tipo is None or "Factura" in tipo:
         resultado_fact = crud_factura.get_facturas(db=db, skip=0, limit=10000, search=search, estado=estado)
         todas_las_facturas = resultado_fact["items"]
         
@@ -212,7 +214,8 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
     # 2. Agrupar Facturas por Localidad del Cliente
     for f in facturas:
         loc_nombre = f.cliente.localidad.nombre if f.cliente and f.cliente.localidad else "Central"
-        loc_nombre = loc_nombre[:31] 
+        loc_nombre = re.sub(r'[\\/*?:\[\]]', '', loc_nombre)[:31]
+        if not loc_nombre.strip(): loc_nombre = "Central"
 
         if loc_nombre not in agrupados_por_localidad:
             agrupados_por_localidad[loc_nombre] = []

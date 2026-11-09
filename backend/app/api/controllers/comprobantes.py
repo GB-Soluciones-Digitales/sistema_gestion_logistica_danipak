@@ -1,6 +1,7 @@
 import io
 import re
 import pandas as pd
+from openpyxl.utils import get_column_letter
 from fastapi import Response
 from datetime import date, datetime
 from typing import Optional
@@ -237,17 +238,23 @@ def exportar_excel_representante(skip: int = 0, limit: int = 10000, search: Opti
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         for localidad, datos in agrupados_por_localidad.items():
-            datos = sorted(datos, key=lambda x: datetime.strptime(x["Fecha"], "%d/%m/%Y"), reverse=True)
+            if localidad != "Sin Datos":
+                datos = sorted(datos, key=lambda x: datetime.strptime(x["Fecha"], "%d/%m/%Y"), reverse=True)
+
             df = pd.DataFrame(datos)
-            df.to_excel(writer, index=False, sheet_name=localidad)
-            
+            sheet_name = localidad[:31]
+            df.to_excel(writer, index=False, sheet_name=sheet_name)
+
+            ws = writer.book[sheet_name]
             for column in df:
                 column_length = max(df[column].astype(str).map(len).max(), len(column))
                 col_idx = df.columns.get_loc(column)
-                writer.sheets[localidad].column_dimensions[chr(65 + col_idx)].width = column_length + 2
+                col_letter = get_column_letter(col_idx + 1)
+                ws.column_dimensions[col_letter].width = column_length + 2
 
     headers = {
-        'Content-Disposition': 'attachment; filename="Reporte_Representantes.xlsx"'
+        'Content-Disposition': 'attachment; filename="Reporte_Representantes.xlsx"',
+        'Access-Control-Expose-Headers': 'Content-Disposition'
     }
     return Response(content=output.getvalue(), media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers=headers)
 

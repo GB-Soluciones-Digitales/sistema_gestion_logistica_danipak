@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Pencil, Ban, Download, Search, ChevronLeft, ChevronRight, Sheet, X, RefreshCw } from 'lucide-react';
+import { Plus, Eye, Pencil, Ban, Download, Search, Filter, ChevronLeft, ChevronRight, Sheet, X, RefreshCw, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -24,17 +24,21 @@ export default function ComprobantesList() {
   const [downloadingId, setDownloadingId] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [estadoFiltro, setEstadoFiltro] = useState("");
+  
+  // RESTAURADO: Tus filtros completos y la caja visual
+  const [filtros, setFiltros] = useState({ tipos: [], estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: clientesData } = useQuery({ queryKey: ['clientes-select'], queryFn: () => clientesServices.getAll(1, 1000) });
   const clientesSelect = useMemo(() => clientesData?.items || [], [clientesData?.items]);
+  
   const { data: localidadesData } = useQuery({ queryKey: ['localidades-select'], queryFn: () => localidadService.getAll(1, 1000) });
   const localidadesSelect = useMemo(() => localidadesData?.items || [], [localidadesData?.items]);
 
-  // Consumimos el nuevo endpoint unificado
+  // LA CONSULTA OPTIMIZADA: Le pasamos los filtros a PostgreSQL
   const { data, isLoading } = useQuery({
-    queryKey: ['comprobantes-unificados', currentPage, limit, searchTerm, estadoFiltro],
-    queryFn: () => comprobantesService.getUnificadosPaginados(currentPage, limit, searchTerm, estadoFiltro),
+    queryKey: ['comprobantes-unificados', currentPage, limit, searchTerm, filtros],
+    queryFn: () => comprobantesService.getUnificadosPaginados(currentPage, limit, searchTerm, filtros),
   });
 
   const totalRecords = data?.total || 0;
@@ -43,14 +47,17 @@ export default function ComprobantesList() {
 
   const anularMutation = useMutation({
     mutationFn: (item) => {
-        if(item.es_factura) return facturaService.updateFactura(item.id, { estado: "Anulado" })
-        return comprobantesService.updateEstado(item.id, { estado: "Anulado" })
+        if(item.es_factura) return facturaService.updateFactura(item.id, { estado: "Anulado" });
+        return comprobantesService.updateEstado(item.id, { estado: "Anulado" });
     },
     onSuccess: () => {
       toast.success("Documento anulado");
       queryClient.invalidateQueries({ queryKey: ['comprobantes-unificados'] });
     },
-    onError: () => toast.error("Error al anular")
+    onError: (error) => {
+      console.error(error);
+      toast.error("Error al anular");
+    }
   });
 
   const handleSearch = (e) => {
@@ -58,15 +65,39 @@ export default function ComprobantesList() {
     setCurrentPage(1);
   };
 
-  const handleEstadoChange = (e) => {
-    setEstadoFiltro(e.target.value);
+  // RESTAURADO: Funciones para manejar los filtros
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFiltros(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
   };
 
+  const toggleTipoFiltro = (tipoAAlternar) => {
+    setFiltros(prev => {
+      const nuevosTipos = prev.tipos.includes(tipoAAlternar)
+        ? prev.tipos.filter(t => t !== tipoAAlternar) 
+        : [...prev.tipos, tipoAAlternar];            
+      return { ...prev, tipos: nuevosTipos };
+    });
+    setCurrentPage(1);
+  };
+
+  const hayFiltros = searchTerm !== "" || filtros.tipos.length > 0 || filtros.estado !== "" || filtros.fecha_desde !== "" || filtros.fecha_hasta !== "" || filtros.cliente_id !== "" || filtros.localidad_id !== "";
+  
   const limpiarFiltros = () => {
     setSearchTerm("");
-    setEstadoFiltro("");
+    setFiltros({ tipos: [], estado: "", fecha_desde: "", fecha_hasta: "", cliente_id: "", localidad_id: "" });
     setCurrentPage(1);
+  };
+
+  const handleAnular = (item) => {
+    setComprobanteAAnular(item);
+  };
+
+  const confirmarAnulacion = () => {
+    const item = comprobanteAAnular;
+    setComprobanteAAnular(null);
+    anularMutation.mutate(item);
   };
 
   const handleDescargarPdf = async (item) => {
@@ -76,7 +107,10 @@ export default function ComprobantesList() {
     }
 
     const pdfWindow = window.open('', '_blank');
-    if (!pdfWindow) return toast.error("Habilite los pop-ups.");
+    if (!pdfWindow) {
+      toast.error("El navegador bloqueó la ventana emergente. Por favor, habilite los pop-ups.");
+      return;
+    }
 
     pdfWindow.document.write('<html><body style="background:#333;color:white;display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;"><h2>Generando comprobante...</h2></body></html>');
     setDownloadingId(item.id);
@@ -84,7 +118,6 @@ export default function ComprobantesList() {
 
     try {
       const comprobanteCompleto = await comprobantesService.getById(item.id);
-      
       let nombreCliente = comprobanteCompleto.nombre_remitente || ""; 
       let nombreLocRem = "";
       let nombreLocDest = "";
@@ -98,7 +131,6 @@ export default function ComprobantesList() {
       if (idLocDestino) nombreLocDest = localidadesSelect.find(l => l.id === idLocDestino)?.nombre || "";
 
       const nombresResueltos = { cliente: nombreCliente, locRemitente: nombreLocRem, locDestinatario: nombreLocDest };
-      
       const blob = await generarPdfLocal(comprobanteCompleto, nombresResueltos);
       const url = window.URL.createObjectURL(blob);
       const titulo = `Comprobante_${comprobanteCompleto.numero_comprobante || 'Offline'}.pdf`;
@@ -110,29 +142,28 @@ export default function ComprobantesList() {
       setTimeout(() => window.URL.revokeObjectURL(url), 10000);
       toast.success("PDF generado exitosamente");
     } catch (error) {
-      console.error("Error al generar PDF:", error);
+      console.error(error);
       pdfWindow.close(); 
       toast.error("Error al generar el PDF");
     } finally {
       setDownloadingId(null);
     }
   };
-
-  const handleAnular = (item) => {
-    setComprobanteAAnular(item);
-  };
   
-  const confirmarAnulacion = () => {
-    const item = comprobanteAAnular;
-    setComprobanteAAnular(null);
-    anularMutation.mutate(item);
-  };
-
   const descargarArchivoBackend = async (urlEndpoint, nombreArchivo) => {
     setIsExporting(true);
     toast.info("Generando archivo Excel...");
     try {
-      const response = await comprobantesService.descargarExcel(urlEndpoint);
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (filtros.tipos.length > 0) params.append('tipo', filtros.tipos.join(',')); 
+      if (filtros.estado) params.append('estado', filtros.estado);
+      if (filtros.fecha_desde) params.append('fecha_desde', filtros.fecha_desde);
+      if (filtros.fecha_hasta) params.append('fecha_hasta', filtros.fecha_hasta);
+      if (filtros.cliente_id) params.append('cliente_id', filtros.cliente_id);
+      if (filtros.localidad_id) params.append('localidad_id', filtros.localidad_id);
+
+      const response = await comprobantesService.descargarExcel(`${urlEndpoint}?${params.toString()}`);
       const url = window.URL.createObjectURL(new Blob([response]));
       const link = document.createElement('a');
       link.href = url;
@@ -142,8 +173,8 @@ export default function ComprobantesList() {
       link.remove();
       toast.success("Excel descargado correctamente");
     } catch (error) {
-      console.error("Error al generar Excel:", error);
-      toast.error("Error al generar Excel. Revise las fechas (Máx 93 días).");
+      console.error(error);
+      toast.error("Error al descargar Excel. Revise las fechas (Máx 93 días).");
     } finally {
       setIsExporting(false);
     }
@@ -230,28 +261,119 @@ export default function ComprobantesList() {
 
           <div className="flex gap-2 w-full sm:w-auto flex-wrap">
             <Button variant="outline" onClick={() => descargarArchivoBackend('/api/comprobantes/exportar/general', 'Reporte_General')} disabled={isExporting} className="w-full sm:w-auto text-green-700 border-green-200 hover:bg-green-50">
-              <Sheet size={18} className="mr-2" /> {isExporting ? '...' : 'General'}
+              <Sheet size={18} className="mr-2" /> {isExporting ? 'Procesando...' : 'General'}
             </Button>
             
             <Button variant="outline" onClick={() => descargarArchivoBackend('/api/comprobantes/exportar/representante', 'Reporte_Representantes')} disabled={isExporting} className="w-full sm:w-auto text-blue-700 border-blue-200 hover:bg-blue-50">
-              <Sheet size={18} className="mr-2" /> {isExporting ? '...' : 'Representantes'}
+              <Sheet size={18} className="mr-2" /> {isExporting ? 'Procesando...' : 'Representantes'}
             </Button>
             
-            <select value={estadoFiltro} onChange={handleEstadoChange} className="px-3 py-2 rounded-md border border-input bg-background text-sm">
-                <option value="">Todos los Estados</option>
-                <option value="Emitido">Emitido</option>
-                <option value="pendiente">Pendiente (Factura)</option>
-                <option value="pagada">Pagada (Factura)</option>
-                <option value="Anulado">Anulado</option>
-            </select>
+            <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="w-full sm:w-auto">
+              <Filter size={18} className="mr-2" />
+              Filtros {hayFiltros && "(Activos)"}
+            </Button>
             
-            {(searchTerm || estadoFiltro) && (
+            {hayFiltros && (
               <Button variant="outline" onClick={limpiarFiltros} className="w-full sm:w-auto text-red-600 border-red-200 hover:bg-red-50">
                 <X size={18} className="mr-2" /> Limpiar
               </Button>
             )}
           </div>
         </div>
+
+        {/* RESTAURADO: El bloque HTML de los filtros */}
+        {showFilters && (
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-border mt-4 animate-in slide-in-from-top-2">
+            
+            <div className="flex flex-col col-span-1 sm:col-span-4 bg-secondary/30 p-3 rounded-md border border-border">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-2">Tipos de Documento a Mostrar:</label>
+              <div className="flex flex-wrap gap-4">
+                {["Comprobante de Envío", "Remito", "Factura"].map(tipoDoc => (
+                  <label key={tipoDoc} className="flex items-center gap-2 cursor-pointer group">
+                    <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${filtros.tipos.includes(tipoDoc) ? 'bg-primary border-primary' : 'bg-background border-input group-hover:border-primary'}`}>
+                      {filtros.tipos.includes(tipoDoc) && <Check size={14} className="text-primary-foreground" />}
+                    </div>
+                    <span className="text-sm font-medium">{tipoDoc}</span>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={filtros.tipos.includes(tipoDoc)} 
+                      onChange={() => toggleTipoFiltro(tipoDoc)} 
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Cliente (Remitente)</label>
+              <select 
+                name="cliente_id" 
+                value={filtros.cliente_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Clientes</option>
+                {clientesSelect.map(c => (
+                  <option key={c.id} value={c.id}>{c.razon_social}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Localidad (Origen/Destino)</label>
+              <select 
+                name="localidad_id" 
+                value={filtros.localidad_id} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todas las Localidades</option>
+                {localidadesSelect.map(l => (
+                  <option key={l.id} value={l.id}>{l.nombre}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Estado</label>
+              <select 
+                name="estado" 
+                value={filtros.estado} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              >
+                <option value="">Todos los Estados</option>
+                <option value="Emitido">Emitido</option>
+                <option value="pendiente">Pendiente (Factura)</option>
+                <option value="pagada">Pagada (Factura)</option>
+                <option value="Anulado">Anulado</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Desde</label>
+              <input 
+                type="date" 
+                name="fecha_desde" 
+                value={filtros.fecha_desde} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+            
+            <div className="flex flex-col">
+              <label className="text-[10px] uppercase text-muted-foreground font-bold mb-1">Hasta</label>
+              <input 
+                type="date" 
+                name="fecha_hasta" 
+                value={filtros.fecha_hasta} 
+                onChange={handleFilterChange}
+                className="px-3 py-2 rounded-md border border-input bg-background text-sm"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-card rounded-lg border border-border shadow-sm overflow-hidden">

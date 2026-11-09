@@ -27,8 +27,24 @@ def create_comprobante(comprobante_in: ComprobanteCreate, db: Session = Depends(
     return crud_comprobante.create_comprobante(db=db, comprobante=comprobante_in, usuario_id=current_user.id)
 
 @router.get("/lista/unificada")
-def get_comprobantes_unificados(skip: int = 0, limit: int = 10, search: Optional[str] = None, estado: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
-    return crud_comprobante.get_comprobantes_unificados(db=db, skip=skip, limit=limit, search=search, estado=estado)
+def get_comprobantes_unificados(
+    skip: int = 0, 
+    limit: int = 10, 
+    search: Optional[str] = None,
+    estado: Optional[str] = None,
+    tipo: Optional[str] = None,
+    fecha_desde: Optional[date] = None,
+    fecha_hasta: Optional[date] = None,
+    cliente_id: Optional[int] = None,
+    localidad_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    return crud_comprobante.get_comprobantes_unificados(
+        db=db, skip=skip, limit=limit, search=search, estado=estado,
+        tipo=tipo, fecha_desde=fecha_desde, fecha_hasta=fecha_hasta,
+        cliente_id=cliente_id, localidad_id=localidad_id
+    )
 
 @router.get("/", response_model=ComprobantePaginatedResponse)
 def get_comprobantes(skip: int = 0, limit: int = 10, search: Optional[str] = None, localidad_id: Optional[int] = None, cliente_id: Optional[int] = None, tipo: Optional[str] = None, fecha_desde: Optional[date] = None, fecha_hasta: Optional[date] = None, estado: Optional[str] = None, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):

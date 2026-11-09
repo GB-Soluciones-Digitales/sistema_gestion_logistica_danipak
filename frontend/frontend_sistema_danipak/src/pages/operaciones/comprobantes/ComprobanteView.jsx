@@ -32,7 +32,6 @@ export default function ComprobanteView() {
           // ==============================
           const data = await facturaService.getById(id);
           
-          // Mapeamos los datos para que la vista los entienda igual que un comprobante
           setComprobante({
             ...data,
             numero_comprobante: data.numero_factura,
@@ -42,7 +41,6 @@ export default function ComprobanteView() {
           });
 
           try {
-            // Buscamos el cliente usando el cliente_id de la factura
             const clienteData = await clientesServices.getById(data.cliente_id);
             setNombres({
               cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_id}`,
@@ -63,15 +61,15 @@ export default function ComprobanteView() {
 
           try {
             const [clienteData, locRemData, locDestData] = await Promise.all([
-              clientesServices.getById(data.cliente_remitente_id),
-              localidadService.getById(data.localidad_remitente_id),
-              localidadService.getById(data.localidad_destinatario_id)
+              data.cliente_remitente_id ? clientesServices.getById(data.cliente_remitente_id) : Promise.resolve({}),
+              data.localidad_remitente_id ? localidadService.getById(data.localidad_remitente_id) : Promise.resolve({}),
+              data.localidad_destinatario_id ? localidadService.getById(data.localidad_destinatario_id) : Promise.resolve({})
             ]);
 
             setNombres({
-              cliente: clienteData.razon_social || clienteData.nombre_fantasia || `ID: ${data.cliente_remitente_id}`,
-              locRemitente: locRemData.nombre || `ID: ${data.localidad_remitente_id}`,
-              locDestinatario: locDestData.nombre || `ID: ${data.localidad_destinatario_id}`
+              cliente: clienteData.razon_social || clienteData.nombre_fantasia || data.nombre_remitente || 'Consumidor Final',
+              locRemitente: locRemData.nombre || 'Sin definir',
+              locDestinatario: locDestData.nombre || 'Sin definir'
             });
           } catch (err) {
             console.error("Error al cargar datos vinculados", err);
@@ -95,7 +93,6 @@ export default function ComprobanteView() {
   }, [id, isFactura]);
 
   const handleDescargarPdf = async () => {
-    // Si es factura, atajamos el clic porque el diseño PDF es distinto
     if (isFactura) {
       toast.info("Descarga de PDF de Factura en desarrollo");
       return;
@@ -226,7 +223,7 @@ export default function ComprobanteView() {
         {/* Remitente y Destinatario */}
         <div className={`grid grid-cols-1 ${!isFactura ? 'md:grid-cols-2 divide-y md:divide-y-0 md:divide-x' : ''} border-border`}>
           
-          {/* Remitente (Solo se muestra si NO es factura) */}
+          {/* Remitente  */}
           {!isFactura && (
             <div className="p-5 space-y-4">
               <h3 className="text-sm font-bold text-muted-foreground uppercase flex items-center gap-2">

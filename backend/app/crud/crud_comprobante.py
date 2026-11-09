@@ -158,7 +158,7 @@ def get_comprobantes_unificados(
 
     query_unificada = q1.union_all(q2).subquery()
     total = db.query(query_unificada).count()
-    items = db.query(query_unificada).order_by(desc(query_unificada.c.fecha_emision)).offset(skip).limit(limit).all()
+    items = db.query(query_unificada).order_by(desc(query_unificada.c.fecha_emision), desc(query_unificada.c.id)).offset(skip).limit(limit).all()
 
     resultado = [
         {

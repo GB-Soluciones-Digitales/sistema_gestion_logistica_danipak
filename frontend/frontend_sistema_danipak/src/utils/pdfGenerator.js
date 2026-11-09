@@ -188,7 +188,7 @@ const dibujarTicket = (doc, startY, comprobante, datosEmpresa, logoImg, nombres)
   doc.setLineDash([], 0); 
 };
 
-export const generarPdfLocal = async (comprobante, nombres) => {
+export const generarPdfLocal = async (comprobante, nombres, autoPrint = false) => {
   const datosEmpresa = await getDatosEmpresa();
   const logoImg = await cargarImagen(LogoExtendido); 
 
@@ -206,6 +206,10 @@ export const generarPdfLocal = async (comprobante, nombres) => {
   doc.setLineDash([], 0);
 
   dibujarTicket(doc, 155, comprobante, datosEmpresa, logoImg, nombres);
+
+  if (autoPrint) {
+    doc.autoPrint();
+  }
 
   return doc.output('blob');
 };

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, useWatch, Controller } from 'react-hook-form';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -26,10 +26,8 @@ export default function ComprobanteForm() {
   const [cargandoNumero, setCargandoNumero] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-  // Helper para sacar la fecha local YYYY-MM-DD
   const getFechaLocal = () => {
     const hoy = new Date();
-    // Armamos los pedazos respetando la zona horaria del navegador
     const anio = hoy.getFullYear();
     const mes = String(hoy.getMonth() + 1).padStart(2, '0');
     const dia = String(hoy.getDate()).padStart(2, '0');
@@ -107,42 +105,39 @@ export default function ComprobanteForm() {
     fetchData();
   }, [id, isEditing, reset]);
 
-  useEffect(() => {
-    if (isEditing) return;
-
-    const calcularProximoNumero = async () => {
-      if (tipoSeleccionado === "Comprobante de Envío") {
-        if (!navigator.onLine) {
-          toast.info("Sin conexión: Ingrese el número correlativo manualmente.");
-          setValue("numero_comprobante", "");
-          return;
-        }
-
-        setCargandoNumero(true);
-        try {
-          const res = await comprobantesService.getUltimoNumero(); 
-          
-          const partes = res.ultimo_numero.split('-');
-          if (partes.length === 2) {
-            const siguienteNumero = parseInt(partes[1], 10) + 1;
-            const nuevoCorrelativo = String(siguienteNumero).padStart(8, '0');
-            const numeroFinal = `${partes[0]}-${nuevoCorrelativo}`;
-            
-            setValue("numero_comprobante", numeroFinal);
-          }
-        } catch (error) {
-          toast.error("Error al obtener el número correlativo");
-          console.error("Error al obtener el número correlativo", error);
-        } finally {
-          setCargandoNumero(false);
-        }
-      } else if (tipoSeleccionado === "Remito" || tipoSeleccionado === "Factura") {
+  const cargarProximoNumero = useCallback(async (tipo) => {
+    if (tipo === "Comprobante de Envío") {
+      if (!navigator.onLine) {
+        toast.info("Sin conexión: Ingrese el número correlativo manualmente.");
         setValue("numero_comprobante", "");
+        return;
       }
-    };
+      setCargandoNumero(true);
+      try {
+        const res = await comprobantesService.getUltimoNumero(); 
+        const partes = res.ultimo_numero.split('-');
+        if (partes.length === 2) {
+          const siguienteNumero = parseInt(partes[1], 10) + 1;
+          const nuevoCorrelativo = String(siguienteNumero).padStart(8, '0');
+          setValue("numero_comprobante", `${partes[0]}-${nuevoCorrelativo}`);
+        }
+      } catch (error) {
+        toast.error("Error al obtener el número correlativo");
+        console.error("Error al obtener el número correlativo", error);
+      } finally {
+        setCargandoNumero(false);
+      }
+    } else if (tipo === "Remito" || tipo === "Factura") {
+      setValue("numero_comprobante", "");
+    }
+  }, [setValue]);
 
-    calcularProximoNumero();
-  }, [tipoSeleccionado, isEditing, setValue]);
+  useEffect(() => {
+    if (!isEditing) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      cargarProximoNumero(tipoSeleccionado);
+    }
+  }, [tipoSeleccionado, isEditing, cargarProximoNumero]);
 
   const onSubmitFactura = async (data) => {
     if (!data.factura_cliente_id) {
@@ -175,7 +170,7 @@ export default function ComprobanteForm() {
     }
   };
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data, shouldPrint = false) => {
     if (esFactura && !isEditing) {
       return onSubmitFactura(data);
     }
@@ -206,12 +201,8 @@ export default function ComprobanteForm() {
         const nuevoComprobante = await comprobantesService.createComprobante(payload);
         toast.success("Comprobante creado exitosamente");
         
-        try {
-          const idCreado = nuevoComprobante.id; 
-          
-          if (idCreado) {
-            toast.info("Abriendo comprobante para imprimir...");
-
+        if (shouldPrint && nuevoComprobante.id) {
+          try {
             const locRemitenteObj = localidades.find(l => l.id === payload.localidad_remitente_id);
             const locDestObj = localidades.find(l => l.id === payload.localidad_destinatario_id);
 
@@ -222,40 +213,45 @@ export default function ComprobanteForm() {
                 localidad_destinatario_rel: { nombre: locDestObj ? locDestObj.nombre : '' }
             };
 
-            const blob = await generarPdfLocal(datosParaPdf);
+            const blob = await generarPdfLocal(datosParaPdf, null, true);
             const url = window.URL.createObjectURL(blob);
 
-            const titulo = `Comprobante_${nuevoComprobante.numero_comprobante}.pdf`;
-            const pdfWindow = window.open('');
-            if (pdfWindow) {
-              pdfWindow.document.write(`
-                <html>
-                  <head>
-                    <title>${titulo}</title>
-                    <style>
-                      body { margin: 0; padding: 0; overflow: hidden; background-color: #333; }
-                      embed { width: 100vw; height: 100vh; border: none; }
-                    </style>
-                  </head>
-                  <body>
-                    <embed src="${url}" type="application/pdf">
-                  </body>
-                </html>
-              `);
-              
-              pdfWindow.document.close();
-            } else {
-              toast.error("El navegador bloqueó la ventana emergente.");
-            }
-            
-            setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = url;
+            document.body.appendChild(iframe);
+
+            setTimeout(() => window.URL.revokeObjectURL(url), 30000);
+          } catch (pdfError) {
+            console.error("Error al generar PDF automático", pdfError);
+            toast.error("Error en la impresión directa.");
           }
-        } catch (pdfError) {
-          console.error("Error al generar PDF automático", pdfError);
-          toast.error("El comprobante se creó, pero falló la apertura automática del PDF.");
         }
+        
         queryClient.invalidateQueries({ queryKey: ['comprobantes'] });
-        navigate('/comprobantes');
+        reset({
+          estado: 'Emitido',
+          tipo: data.tipo,
+          cantidad_bultos: 1,
+          fecha_emision: getFechaLocal(),
+          nombre_remitente: '',
+          cliente_remitente_id: null,
+          factura_cliente_id: null,
+          factura_cliente_nombre: '',
+          domicilio_remitente: '',
+          localidad_remitente_id: '',
+          nombre_destinatario: '',
+          domicilio_destinatario: '',
+          localidad_destinatario_id: '',
+          importe_contra_reembolso: '',
+          importe_flete_pago: '',
+          importe_flete_cobro: '',
+          observaciones: '',
+          numero_comprobante: '' 
+        });
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        cargarProximoNumero(data.tipo);
       }
       
     } catch (error) {
@@ -545,10 +541,24 @@ export default function ComprobanteForm() {
           <Button type="button" variant="outline" onClick={() => navigate('/comprobantes')}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2">
-            {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            {isEditing ? 'Guardar Cambios' : esFactura ? 'Registrar Factura' : 'Generar Comprobante'}
-          </Button>
+
+          {esFactura ? (
+            <Button type="button" onClick={handleSubmit((d) => onSubmit(d, false))} disabled={isSubmitting} className="flex items-center gap-2">
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+              Registrar Factura
+            </Button>
+          ) : (
+            <>
+              <Button type="button" variant="secondary" onClick={handleSubmit((d) => onSubmit(d, false))} disabled={isSubmitting} className="flex items-center gap-2">
+                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                {isEditing ? 'Solo Guardar Cambios' : 'Solo Guardar'}
+              </Button>
+              <Button type="button" onClick={handleSubmit((d) => onSubmit(d, true))} disabled={isSubmitting} className="flex items-center gap-2">
+                {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <Printer size={18} />}
+                {isEditing ? 'Guardar e Imprimir' : 'Guardar e Imprimir'}
+              </Button>
+            </>
+          )}
         </div>
       </form>
     </div>
